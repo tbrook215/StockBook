@@ -1,0 +1,2725 @@
+<html lang="zh-TW" data-theme="light"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<title>股票投資儀表板</title>
+<style>
+/* dynamic broker badge styles will be injected via JS */
+:root{
+  --bg:#f5f5f2;--surface:#fff;--surface2:#f8f7f4;--border:#e0ddd5;--border2:#f0ede8;
+  --text:#1a1a1a;--text2:#555;--text3:#888;--text4:#aaa;
+  --pos:#a32d2d;--neg:#0f6e56;--pos-bg:#fdf0f0;--neg-bg:#e1f5ee;
+  --hl-bg:#fdf5f5;--hl-border:#e8b8b8;
+}
+[data-theme="dark"]{
+  --bg:#141414;--surface:#1e1e1e;--surface2:#252525;--border:#2e2e2e;--border2:#2a2a2a;
+  --text:#e8e6e0;--text2:#aaa;--text3:#777;--text4:#555;
+  --pos:#f07070;--neg:#2dd4a0;--pos-bg:#2e1414;--neg-bg:#0d2e24;
+  --hl-bg:#2e1414;--hl-border:#5c1d1d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft JhengHei',sans-serif;background:var(--bg);color:var(--text);font-size:14px;transition:background .2s,color .2s}
+.container{max-width:1000px;margin:0 auto;padding:20px 16px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px}
+.header h1{font-size:18px;font-weight:500}
+.dark-toggle{cursor:pointer;font-size:18px;padding:4px 6px;border-radius:6px;border:none;background:transparent;color:var(--text)}
+.dark-toggle:hover{background:var(--surface2)}
+.nav{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.nav-tab{font-size:13px;padding:9px 16px;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.nav-tab.active{color:var(--text);border-bottom-color:var(--text);font-weight:500}
+.nav-tab:hover:not(.active){color:var(--text2)}
+.page{display:none}.page.active{display:block}
+.card-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:12px 16px;flex:1;min-width:110px;position:relative;overflow:hidden}
+.card.big{min-width:160px}
+.card .lbl{font-size:11px;color:var(--text3);margin-bottom:4px}
+.card .val{font-size:20px;font-weight:500;position:relative;z-index:1}
+.card.hl{background:var(--hl-bg);border-color:var(--hl-border)}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+.section{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.sec-title{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px}
+.sub-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.sub-tab{font-size:12px;padding:4px 12px;border-radius:20px;cursor:pointer;border:0.5px solid var(--border);color:var(--text3);background:var(--surface)}
+.sub-tab.active{background:var(--text);color:var(--surface);border-color:var(--text)}
+.tbl-wrap{overflow-x:auto;border:0.5px solid var(--border);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--surface2);font-size:11px;color:var(--text3);font-weight:500;padding:8px 10px;border-bottom:0.5px solid var(--border);text-align:left;white-space:nowrap}
+td{padding:8px 10px;border-bottom:0.5px solid var(--border2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr.clickable:hover td{background:var(--surface2);cursor:pointer}
+tr.expandable:hover td{background:var(--surface2);cursor:pointer}
+tfoot td{background:var(--surface2);font-weight:500;padding:9px 10px;border-top:0.5px solid var(--border)}
+.badge{font-size:11px;padding:2px 7px;border-radius:20px;display:inline-block}
+.b現股{background:#e1f5ee;color:#085041}.b當沖{background:#faeeda;color:#633806}
+.b股利{background:#e6f1fb;color:#0c447c}.b買進{background:#e8f0ff;color:#1a3a8b}
+/* broker badge colors injected dynamically */
+[data-theme="dark"] .b現股{background:#0d2e24;color:#2dd4a0}
+[data-theme="dark"] .b當沖{background:#2e1e00;color:#d4a02d}
+[data-theme="dark"] .b股利{background:#0d1e3a;color:#6eaaff}
+[data-theme="dark"] .b買進{background:#0d1a3a;color:#6e9fff}
+/* broker badge dark colors injected dynamically */
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.controls select,.controls input,.field input,.field select{font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:7px;background:var(--surface);height:32px;outline:none;color:var(--text);transition:border-color .15s}
+.controls select:focus,.controls input:focus,.field input:focus,.field select:focus{border-color:var(--text3)}
+.btn{font-size:13px;padding:5px 12px;border:0.5px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);cursor:pointer;height:32px;white-space:nowrap;transition:background .12s}
+.btn:hover{background:var(--surface2)}
+.btn-p{background:var(--text);color:var(--surface);border-color:var(--text)}
+.btn-p:hover{opacity:.85}
+.btn-sm{font-size:12px;padding:3px 10px;height:28px}
+.btn-danger{color:var(--neg);border-color:var(--neg-bg)}
+.field label{font-size:11px;color:var(--text3);display:block;margin-bottom:3px}
+.field input,.field select{width:100%}
+.add-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.calc-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chip{background:var(--surface2);border-radius:6px;padding:5px 12px;font-size:12px}
+.chip .cl{font-size:10px;color:var(--text4);margin-bottom:1px}
+.year-bar{display:flex;flex-wrap:wrap;gap:0;border-bottom:0.5px solid var(--border);margin-bottom:14px}
+.ypill{font-size:12px;padding:6px 14px;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-0.5px;white-space:nowrap}
+.ypill.active{color:var(--text);border-bottom-color:var(--text);font-weight:500}
+.pager{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--text3)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.modal{background:var(--surface);border-radius:14px;padding:22px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,0.2);animation:modal-in .15s ease}
+.modal.wide{max-width:560px}
+@keyframes modal-in{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h3{font-size:15px;font-weight:500;margin-bottom:5px}
+.modal .sub{font-size:12px;color:var(--text3);margin-bottom:16px}
+.modal-fields{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.modal-fields .field input,.modal-fields .field select{height:36px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.sm-calc{background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap}
+.sm-calc .cl{font-size:10px;color:var(--text4);margin-bottom:2px}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:var(--surface);padding:9px 16px;border-radius:8px;font-size:13px;display:none;z-index:9999;max-width:280px;animation:toast-in .2s ease}
+@keyframes toast-in{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.price-display{cursor:pointer;padding:2px 6px;border-radius:5px;border:0.5px solid transparent;transition:border-color .12s}
+.price-display:hover{border-color:var(--border);background:var(--surface2)}
+.price-input{width:75px;font-size:12px;text-align:right;padding:3px 6px;border:0.5px solid var(--text3);border-radius:5px;background:var(--surface);color:var(--text);height:27px;outline:none}
+.empty-state{text-align:center;padding:32px 16px;color:var(--text3)}
+.empty-state .icon{font-size:32px;margin-bottom:8px;opacity:.5}
+.empty-state p{font-size:13px;margin-bottom:12px}
+.batch-row td{background:var(--surface2);font-size:12px;color:var(--text2)}
+.batch-add-row td{background:var(--surface2);padding:6px 10px}
+.month-expand-row td{background:var(--surface2)}
+/* 個股績效 */
+.stock-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px}
+.stat-card{background:var(--surface2);border-radius:8px;padding:10px 12px}
+.stat-card .sl{font-size:10px;color:var(--text4);margin-bottom:2px}
+.stat-card .sv{font-size:16px;font-weight:500}
+/* 對帳 */
+.reconcile-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--border2)}
+.reconcile-row:last-child{border-bottom:none}
+@media(max-width:600px){
+  .container{padding:12px 10px}
+  .card{min-width:calc(50% - 5px)}.card.big{min-width:100%}
+  .nav-tab{padding:8px 12px;font-size:12px}
+  .add-row{flex-direction:column}.add-row .field{width:100%!important}
+  .modal{padding:16px}.sm-calc{flex-direction:column;gap:6px}
+  th,td{padding:7px 8px;font-size:12px}
+}
+</style>
+<style id="_broker-styles">.b中信{background:#fff0e6;color:#8b3a00}[data-theme="dark"] .b中信{background:#2e1800;color:#ffaa6e}
+.b國泰{background:#e8f0ff;color:#1a3a8b}[data-theme="dark"] .b國泰{background:#0d1a3a;color:#6e9fff}</style></head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📈 股票投資</h1>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="hdr-sub" style="font-size:12px;color:var(--text3)">2026年</span>
+      <button class="btn btn-sm" onclick="openBackupModal()" title="備份/匯入">💾</button>
+      <button class="dark-toggle" onclick="toggleDark()" title="深色模式">🌙</button>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="nav-tab" onclick="switchPage('home')">首頁</div>
+    <div class="nav-tab" onclick="switchPage('history')">歷年</div>
+    <div class="nav-tab" onclick="switchPage('detail')">明細</div>
+    <div class="nav-tab" onclick="switchPage('stocks')">個股</div>
+    <div class="nav-tab active" onclick="switchPage('settings')">⚙ 設定</div>
+  </div>
+
+  <!-- 首頁 -->
+  <div class="page" id="page-home">
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">資產總覽</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm" onclick="openReconcileModal()">⚖ 對帳</button>
+          <button class="btn btn-sm" onclick="toggleFundForm()">± 資金異動</button>
+        </div>
+      </div>
+      <div id="asset-overview"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border2)">
+      <span class="badge b中信" style="font-size:12px;padding:3px 12px;min-width:44px;text-align:center">中信</span>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;flex:1">
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">現金</div><div style="font-weight:500">12,000</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">持股市值</div><div style="font-weight:500">712,000</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">總資產</div><div style="font-weight:500;font-size:16px">724,000</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">未實現損益</div><div style="font-weight:500" class="pos">+228,490</div></div>
+      </div>
+    </div><div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border2)">
+      <span class="badge b國泰" style="font-size:12px;padding:3px 12px;min-width:44px;text-align:center">國泰</span>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;flex:1">
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">現金</div><div style="font-weight:500">6,472</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">持股市值</div><div style="font-weight:500">400,000</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">總資產</div><div style="font-weight:500;font-size:16px">406,472</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">未實現損益</div><div style="font-weight:500" class="neg">-5,500</div></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0">
+      <span style="font-size:12px;font-weight:500;color:var(--text2);min-width:44px;text-align:center">合計</span>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;flex:1">
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">現金合計</div><div style="font-weight:500">18,472</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">持股市值</div><div style="font-weight:500">1,112,000</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">總資產</div><div style="font-weight:500;font-size:18px">1,130,472</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">未實現損益</div><div style="font-weight:500" class="pos">+222,990</div></div>
+      </div>
+    </div></div>
+      <div id="fund-form" style="display:none;margin-top:14px;padding-top:14px;border-top:0.5px solid var(--border2)">
+        <div class="add-row" style="margin-bottom:10px">
+          <div class="field" style="width:80px"><label>帳戶</label><select id="fd-acct"><option>中信</option><option>國泰</option></select></div>
+          <div class="field" style="width:76px"><label>類型</label><select id="fd-type"><option value="in">入金</option><option value="out">出金</option></select></div>
+          <div class="field" style="width:110px"><label>金額</label><input type="number" id="fd-amount" placeholder="10000"></div>
+          <div class="field" style="flex:1;min-width:100px"><label>備註</label><input type="text" id="fd-note" placeholder="薪水、提領等"></div>
+          <div style="display:flex;align-items:flex-end"><button class="btn btn-p" onclick="addFund()">確認</button></div>
+        </div>
+        <div style="font-size:12px;font-weight:500;color:var(--text3);margin-bottom:8px">異動記錄</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th style="width:85px">日期</th><th style="width:50px">帳戶</th><th style="width:50px">類型</th><th style="text-align:right">金額</th><th>備註</th><th style="width:40px"></th></tr></thead>
+          <tbody id="fund-log"><tr>
+    <td>2026-06-04</td>
+    <td><span class="badge b國泰">國泰</span></td>
+    <td style="color:var(--pos);font-size:12px">入金</td>
+    <td style="text-align:right;font-weight:500;color:var(--pos)">+80,000</td>
+    <td style="color:var(--text3)">中信轉入</td>
+    <td><button class="btn btn-sm btn-danger" onclick="delFund(0)" style="padding:2px 8px;height:24px">刪</button></td>
+  </tr><tr>
+    <td>2026-06-04</td>
+    <td><span class="badge b中信">中信</span></td>
+    <td style="color:var(--neg);font-size:12px">出金</td>
+    <td style="text-align:right;font-weight:500;color:var(--neg)">-30,000</td>
+    <td style="color:var(--text3)">轉入國泰帳戶</td>
+    <td><button class="btn btn-sm btn-danger" onclick="delFund(1)" style="padding:2px 8px;height:24px">刪</button></td>
+  </tr><tr>
+    <td>2026-06-04</td>
+    <td><span class="badge b國泰">國泰</span></td>
+    <td style="color:var(--pos);font-size:12px">賣出</td>
+    <td style="text-align:right;font-weight:500;color:var(--pos)">+79,400</td>
+    <td style="color:var(--text3)">2356 英業達</td>
+    <td></td>
+  </tr><tr>
+    <td>2026-05-29</td>
+    <td><span class="badge b國泰">國泰</span></td>
+    <td style="color:var(--neg);font-size:12px">買進</td>
+    <td style="text-align:right;font-weight:500;color:var(--neg)">-69,300</td>
+    <td style="color:var(--text3)">2356 英業達</td>
+    <td></td>
+  </tr><tr>
+    <td>2026-05-23</td>
+    <td><span class="badge b中信">中信</span></td>
+    <td style="color:var(--neg);font-size:12px">出金</td>
+    <td style="text-align:right;font-weight:500;color:var(--neg)">-10,000</td>
+    <td style="color:var(--text3)">出金</td>
+    <td><button class="btn btn-sm btn-danger" onclick="delFund(4)" style="padding:2px 8px;height:24px">刪</button></td>
+  </tr></tbody>
+        </table></div>
+      </div>
+    </div>
+    <div class="card-row" id="today-cards">
+    <div class="card big hl" id="card-total"><div class="lbl">今年總收益</div><div class="val pos">+204,090</div><canvas width="336" height="72" style="position: absolute; bottom: 0px; left: 0px; right: 0px; opacity: 0.4; pointer-events: none; height: 36px; width: 100%;"></canvas></div>
+    <div class="card" id="card-stock"><div class="lbl">現股</div><div class="val pos">+219,194</div><canvas width="336" height="72" style="position: absolute; bottom: 0px; left: 0px; right: 0px; opacity: 0.4; pointer-events: none; height: 36px; width: 100%;"></canvas></div>
+    <div class="card" id="card-day"><div class="lbl">當沖</div><div class="val neg">-15,104</div><canvas width="336" height="72" style="position: absolute; bottom: 0px; left: 0px; right: 0px; opacity: 0.4; pointer-events: none; height: 36px; width: 100%;"></canvas></div>
+    <div class="card" id="card-div"><div class="lbl">現金股利</div><div class="val pos">+0</div><canvas width="336" height="72" style="position: absolute; bottom: 0px; left: 0px; right: 0px; opacity: 0.4; pointer-events: none; height: 36px; width: 100%;"></canvas></div>
+    <div class="card" id="card-cr"><div class="lbl">資金報酬率</div><div class="val pos">+3.12%</div></div></div>
+    <!-- 年度目標進度 -->
+    <div class="section" id="annual-target-section" style="margin-bottom: 14px; display: block;">
+      <div id="annual-target-body">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div class="sec-title" style="margin:0">2026 年度目標進度</div>
+      <div style="font-size:12px;color:var(--text3)">目標 100%　＝　750,000 元</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px">
+      <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">年初資產</div><div style="font-weight:500">750,000</div></div>
+      <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">已實現損益</div><div style="font-weight:500" class="pos">+204,090</div></div>
+      <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">未實現損益</div><div style="font-weight:500" class="pos">+222,990</div></div>
+      <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">合計損益</div><div style="font-weight:500;font-size:16px" class="pos">+427,080</div></div>
+    </div>
+    <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px">
+      <span style="color:var(--text3)">目標達成率</span>
+      <span style="font-weight:500" class="">56.9%</span>
+    </div>
+    <div style="background:var(--surface2);border-radius:20px;height:10px;overflow:hidden;position:relative;margin-bottom:6px">
+      <div style="height:100%;width:56.943999999999996%;background:var(--pos);border-radius:20px;transition:width .6s ease"></div>
+      <div style="position:absolute;top:0;left:51.2%;width:2px;height:100%;background:var(--text4);opacity:0.5" title="目前時間進度"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text4);display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px">
+      <span>時間進度 51%（今年第 187 天）</span>
+      <span>距目標還差 322,920 元</span>
+    </div></div>
+    </div>
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="sec-title" style="margin:0">現有持股</div>
+          <div class="sub-tabs" id="acct-sub-tabs"><div class="sub-tab active" data-acct="中信" onclick="switchAcct('中信')">中信</div><div class="sub-tab" data-acct="國泰" onclick="switchAcct('國泰')">國泰</div><div class="sub-tab" data-acct="全部" onclick="switchAcct('全部')">全部</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span id="price-update-time" style="font-size:11px;color:var(--text4)">更新：下午06:17</span>
+          <button class="btn btn-sm" onclick="fetchPrices()">↻ 更新現價</button>
+          <button class="btn btn-sm btn-p" onclick="openAddHoldingModal()">＋ 新增持股</button>
+        </div>
+      </div>
+      <div id="holding-pie-wrap" style="display: block; margin-bottom: 14px;">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <canvas id="pieChart" width="260" height="260" style="flex-shrink:0;width:130px;height:130px"></canvas>
+          <div id="pie-legend" style="display:flex;flex-direction:column;gap:6px;font-size:12px;flex:1;min-width:120px"><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:#c0392b;flex-shrink:0"></div><span style="color:var(--text2)">群創</span><span style="color:var(--text3);margin-left:auto;font-size:11px">49%</span></div><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:#e67e22;flex-shrink:0"></div><span style="color:var(--text2)">華邦電</span><span style="color:var(--text3);margin-left:auto;font-size:11px">51%</span></div></div>
+        </div>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th>股票代碼</th><th style="text-align:right">張數</th>
+          <th style="text-align:right">平均成本</th><th style="text-align:right">持有成本</th>
+          <th style="text-align:right;width:90px">現價</th><th style="text-align:right">市值</th>
+          <th style="text-align:right">未實現損益</th><th style="width:90px"></th>
+        </tr></thead>
+        <tbody id="holdings-body"><tr>
+      <td>
+        <button onclick="toggleExpandH(0)" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0 4px 0 0;vertical-align:middle">▶</button>
+        <span class="badge b中信" style="margin-right:4px">中信</span>3481 群創
+      </td>
+      <td style="text-align:right">5</td>
+      <td style="text-align:right">37.20</td>
+      <td style="text-align:right">186,010</td>
+      <td style="text-align:right" id="price-cell-0"><span class="price-display" onclick="editPrice(0)" title="點擊修改">69.2</span></td>
+      <td style="text-align:right">346,000</td>
+      <td style="text-align:right" class="pos">+159,990<br><span style="font-size:11px">+86.01%</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm btn-p" onclick="openSellModal(0)" style="padding:2px 8px;margin-right:3px">賣出</button>
+        <button class="btn btn-sm" onclick="openEditHolding(0)" style="padding:2px 8px">修改</button>
+      </td>
+    </tr><tr>
+      <td>
+        <button onclick="toggleExpandH(1)" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0 4px 0 0;vertical-align:middle">▶</button>
+        <span class="badge b中信" style="margin-right:4px">中信</span>2344 華邦電
+      </td>
+      <td style="text-align:right">2</td>
+      <td style="text-align:right">148.75</td>
+      <td style="text-align:right">297,500</td>
+      <td style="text-align:right" id="price-cell-1"><span class="price-display" onclick="editPrice(1)" title="點擊修改">183</span></td>
+      <td style="text-align:right">366,000</td>
+      <td style="text-align:right" class="pos">+68,500<br><span style="font-size:11px">+23.03%</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm btn-p" onclick="openSellModal(1)" style="padding:2px 8px;margin-right:3px">賣出</button>
+        <button class="btn btn-sm" onclick="openEditHolding(1)" style="padding:2px 8px">修改</button>
+      </td>
+    </tr></tbody>
+        <tfoot id="holdings-foot"><tr>
+    <td colspan="3">合計（有現價）</td>
+    <td style="text-align:right">483,510</td><td></td>
+    <td style="text-align:right">712,000</td>
+    <td style="text-align:right" class="pos">+228,490 (+47.26%)</td>
+    <td></td>
+  </tr></tfoot>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- 歷年 -->
+  <div class="page" id="page-history">
+    <div class="card-row" id="history-cards">
+    <div class="card big hl"><div class="lbl">累計總收益</div><div class="val pos">+138,194</div></div>
+    <div class="card"><div class="lbl">現股合計</div><div class="val pos">+115,499</div></div>
+    <div class="card"><div class="lbl">當沖合計</div><div class="val neg">-4,360</div></div>
+    <div class="card"><div class="lbl">股利合計</div><div class="val pos">+27,055</div></div></div>
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div class="section" style="flex:1;min-width:260px;margin-bottom:0">
+        <div class="sec-title">本年各月損益 <span style="font-size:11px;color:var(--text4);font-weight:400">（點擊月份跳至明細）</span></div>
+        <div style="position:relative;height:200px"><canvas id="monthChart" style="box-sizing: border-box; display: block; height: 200px; width: 401px;" width="401" height="200"></canvas></div>
+      </div>
+      <div class="section" style="flex:1;min-width:260px;margin-bottom:0">
+        <div class="sec-title">累計資產增長</div>
+        <div style="position:relative;height:200px"><canvas id="growthChart" style="box-sizing: border-box; display: block; height: 200px; width: 401px;" width="401" height="200"></canvas></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-title">年度明細（點年份展開月份）</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th style="width:60px">年度</th><th style="text-align:right">現股</th><th style="text-align:right">當沖</th>
+          <th style="text-align:right">現金股利</th><th style="text-align:right">年度合計</th>
+          <th style="text-align:right">筆數</th><th style="text-align:right">資金報酬率</th>
+        </tr></thead>
+        <tbody id="history-body"><tr class="expandable" onclick="toggleYear('2026')">
+      <td style="font-weight:500"><span style="font-size:11px;color:var(--text3);margin-right:4px">▶</span>2026</td>
+      <td style="text-align:right" class="pos">+219,194</td>
+      <td style="text-align:right" class="neg">-15,104</td>
+      <td style="text-align:right;color:var(--pos)">+0</td>
+      <td style="text-align:right;font-weight:500" class="pos">+204,090</td>
+      <td style="text-align:right;color:var(--text3)">31</td>
+      <td style="text-align:right" class="pos">+3.12%</td>
+    </tr><tr class="expandable" onclick="toggleYear('2025')">
+      <td style="font-weight:500"><span style="font-size:11px;color:var(--text3);margin-right:4px">▶</span>2025</td>
+      <td style="text-align:right" class="neg">-57,731</td>
+      <td style="text-align:right" class="pos">+5,904</td>
+      <td style="text-align:right;color:var(--pos)">+7,399</td>
+      <td style="text-align:right;font-weight:500" class="neg">-44,428</td>
+      <td style="text-align:right;color:var(--text3)">28</td>
+      <td style="text-align:right" class="neg">-1.21%</td>
+    </tr><tr class="expandable" onclick="toggleYear('2024')">
+      <td style="font-weight:500"><span style="font-size:11px;color:var(--text3);margin-right:4px">▶</span>2024</td>
+      <td style="text-align:right" class="pos">+55,584</td>
+      <td style="text-align:right" class="neg">-799</td>
+      <td style="text-align:right;color:var(--pos)">+5,585</td>
+      <td style="text-align:right;font-weight:500" class="pos">+60,370</td>
+      <td style="text-align:right;color:var(--text3)">18</td>
+      <td style="text-align:right" class="pos">+2.46%</td>
+    </tr><tr class="expandable" onclick="toggleYear('2023')">
+      <td style="font-weight:500"><span style="font-size:11px;color:var(--text3);margin-right:4px">▶</span>2023</td>
+      <td style="text-align:right" class="neg">-47,575</td>
+      <td style="text-align:right" class="pos">+4,090</td>
+      <td style="text-align:right;color:var(--pos)">+5,300</td>
+      <td style="text-align:right;font-weight:500" class="neg">-38,185</td>
+      <td style="text-align:right;color:var(--text3)">23</td>
+      <td style="text-align:right" class="neg">-1.13%</td>
+    </tr><tr class="expandable" onclick="toggleYear('2022')">
+      <td style="font-weight:500"><span style="font-size:11px;color:var(--text3);margin-right:4px">▶</span>2022</td>
+      <td style="text-align:right" class="neg">-70,714</td>
+      <td style="text-align:right" class="pos">+0</td>
+      <td style="text-align:right;color:var(--pos)">+6,457</td>
+      <td style="text-align:right;font-weight:500" class="neg">-64,257</td>
+      <td style="text-align:right;color:var(--text3)">6</td>
+      <td style="text-align:right" class="neg">-7.09%</td>
+    </tr><tr class="expandable" onclick="toggleYear('2021')">
+      <td style="font-weight:500"><span style="font-size:11px;color:var(--text3);margin-right:4px">▶</span>2021</td>
+      <td style="text-align:right" class="pos">+8,956</td>
+      <td style="text-align:right" class="pos">+1,549</td>
+      <td style="text-align:right;color:var(--pos)">+2,314</td>
+      <td style="text-align:right;font-weight:500" class="pos">+12,819</td>
+      <td style="text-align:right;color:var(--text3)">26</td>
+      <td style="text-align:right" class="pos">+1.38%</td>
+    </tr><tr class="expandable" onclick="toggleYear('2020')">
+      <td style="font-weight:500"><span style="font-size:11px;color:var(--text3);margin-right:4px">▶</span>2020</td>
+      <td style="text-align:right" class="pos">+7,785</td>
+      <td style="text-align:right" class="pos">+0</td>
+      <td style="text-align:right;color:var(--pos)">+0</td>
+      <td style="text-align:right;font-weight:500" class="pos">+7,785</td>
+      <td style="text-align:right;color:var(--text3)">1</td>
+      <td style="text-align:right" class="pos">+11.96%</td>
+    </tr></tbody>
+        <tfoot id="history-foot"><tr>
+    <td>合計</td>
+    <td style="text-align:right" class="pos">+115,499</td>
+    <td style="text-align:right" class="neg">-4,360</td>
+    <td style="text-align:right;color:var(--pos)">+27,055</td>
+    <td style="text-align:right" class="pos">+138,194</td>
+    <td style="text-align:right;color:var(--text3)">133</td>
+    <td style="text-align:right" class="pos">+0.77%</td>
+  </tr></tfoot>
+      </table></div>
+    </div>
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">月結算明細</div>
+        <select id="monthly-year-sel" onchange="buildMonthlySummary()" style="font-size:12px;padding:4px 8px;border:0.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);height:28px"><option value="2026" selected="">2026年</option><option value="2025">2025年</option><option value="2024">2024年</option><option value="2023">2023年</option><option value="2022">2022年</option><option value="2021">2021年</option><option value="2020">2020年</option></select>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th style="width:60px">月份</th>
+          <th style="text-align:right">買進金額</th>
+          <th style="text-align:right">賣出金額</th>
+          <th style="text-align:right">損益</th>
+          <th style="text-align:right">手續費</th>
+          <th style="text-align:right">手續費退款</th>
+          <th style="text-align:right">淨收益</th>
+          <th style="width:40px"></th>
+        </tr></thead>
+        <tbody id="monthly-body"><tr>
+      <td style="font-weight:500">1月</td>
+      <td style="text-align:right;color:var(--text2)">2,935,523</td>
+      <td style="text-align:right;color:var(--text2)">2,963,314</td>
+      <td style="text-align:right" class="pos">+27,791</td>
+      <td style="text-align:right;color:var(--neg)">-14,291</td>
+      <td style="text-align:right">
+        <span class="pos">—</span>
+        <button onclick="addFeeRefund('2026','01')" style="background:none;border:0.5px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;padding:1px 5px;color:var(--text3);margin-left:4px" title="輸入退款金額">＋</button>
+      </td>
+      <td style="text-align:right;font-weight:500" class="pos">+13,500</td>
+      <td></td>
+    </tr><tr>
+      <td style="font-weight:500">2月</td>
+      <td style="text-align:right;color:var(--text2)">1,245,707</td>
+      <td style="text-align:right;color:var(--text2)">1,254,339</td>
+      <td style="text-align:right" class="pos">+8,632</td>
+      <td style="text-align:right;color:var(--neg)">-6,853</td>
+      <td style="text-align:right">
+        <span class="pos">—</span>
+        <button onclick="addFeeRefund('2026','02')" style="background:none;border:0.5px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;padding:1px 5px;color:var(--text3);margin-left:4px" title="輸入退款金額">＋</button>
+      </td>
+      <td style="text-align:right;font-weight:500" class="pos">+1,779</td>
+      <td></td>
+    </tr><tr>
+      <td style="font-weight:500">3月</td>
+      <td style="text-align:right;color:var(--text2)">366,350</td>
+      <td style="text-align:right;color:var(--text2)">366,348</td>
+      <td style="text-align:right" class="neg">-2</td>
+      <td style="text-align:right;color:var(--neg)">-1,801</td>
+      <td style="text-align:right">
+        <span class="pos">—</span>
+        <button onclick="addFeeRefund('2026','03')" style="background:none;border:0.5px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;padding:1px 5px;color:var(--text3);margin-left:4px" title="輸入退款金額">＋</button>
+      </td>
+      <td style="text-align:right;font-weight:500" class="neg">-1,803</td>
+      <td></td>
+    </tr><tr>
+      <td style="font-weight:500">4月</td>
+      <td style="text-align:right;color:var(--text2)">516,882</td>
+      <td style="text-align:right;color:var(--text2)">563,851</td>
+      <td style="text-align:right" class="pos">+46,969</td>
+      <td style="text-align:right;color:var(--neg)">-3,129</td>
+      <td style="text-align:right">
+        <span class="pos">—</span>
+        <button onclick="addFeeRefund('2026','04')" style="background:none;border:0.5px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;padding:1px 5px;color:var(--text3);margin-left:4px" title="輸入退款金額">＋</button>
+      </td>
+      <td style="text-align:right;font-weight:500" class="pos">+43,840</td>
+      <td></td>
+    </tr><tr>
+      <td style="font-weight:500">5月</td>
+      <td style="text-align:right;color:var(--text2)">1,410,964</td>
+      <td style="text-align:right;color:var(--text2)">1,521,860</td>
+      <td style="text-align:right" class="pos">+110,896</td>
+      <td style="text-align:right;color:var(--neg)">-6,995</td>
+      <td style="text-align:right">
+        <span class="pos">—</span>
+        <button onclick="addFeeRefund('2026','05')" style="background:none;border:0.5px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;padding:1px 5px;color:var(--text3);margin-left:4px" title="輸入退款金額">＋</button>
+      </td>
+      <td style="text-align:right;font-weight:500" class="pos">+103,901</td>
+      <td></td>
+    </tr><tr>
+      <td style="font-weight:500">6月</td>
+      <td style="text-align:right;color:var(--text2)">69,327</td>
+      <td style="text-align:right;color:var(--text2)">79,131</td>
+      <td style="text-align:right" class="pos">+9,804</td>
+      <td style="text-align:right;color:var(--neg)">-297</td>
+      <td style="text-align:right">
+        <span class="pos">—</span>
+        <button onclick="addFeeRefund('2026','06')" style="background:none;border:0.5px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;padding:1px 5px;color:var(--text3);margin-left:4px" title="輸入退款金額">＋</button>
+      </td>
+      <td style="text-align:right;font-weight:500" class="pos">+9,507</td>
+      <td></td>
+    </tr></tbody>
+        <tfoot id="monthly-foot"><tr>
+    <td>合計</td>
+    <td style="text-align:right">6,544,753</td>
+    <td style="text-align:right">6,748,843</td>
+    <td style="text-align:right" class="pos">+204,090</td>
+    <td style="text-align:right;color:var(--neg)">-33,366</td>
+    <td style="text-align:right;color:var(--pos)">—</td>
+    <td style="text-align:right;font-weight:500" class="pos">+170,724</td>
+    <td></td>
+  </tr></tfoot>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- 明細 -->
+  <div class="page" id="page-detail">
+    <div class="section" style="margin-bottom:14px">
+      <div class="sec-title">近期交易（最新10筆）</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th style="width:88px">日期</th><th>股票</th><th style="width:52px">類型</th>
+          <th style="width:52px">帳戶</th><th style="width:85px;text-align:right">損益</th>
+          <th style="width:70px;text-align:right">報酬率</th>
+        </tr></thead>
+        <tbody id="today-recent"><tr>
+    <td>2026-06-04</td>
+    <td>2356 英業達 <span class="badge b國泰">國泰</span></td>
+    <td><span class="badge b現股">現股</span></td>
+    <td><span class="badge b國泰">國泰</span></td>
+    <td style="text-align:right" class="pos">+9,804</td>
+    <td style="text-align:right" class="pos">+14.14%</td>
+  </tr><tr>
+    <td>2026-05-28</td>
+    <td>6147 頎邦 <span class="badge b國泰">國泰</span></td>
+    <td><span class="badge b當沖">當沖</span></td>
+    <td><span class="badge b國泰">國泰</span></td>
+    <td style="text-align:right" class="pos">+18,354</td>
+    <td style="text-align:right" class="pos">+6.90%</td>
+  </tr><tr>
+    <td>2026-05-28</td>
+    <td>6175 立敦 <span class="badge b中信">中信</span></td>
+    <td><span class="badge b現股">現股</span></td>
+    <td><span class="badge b中信">中信</span></td>
+    <td style="text-align:right" class="pos">+15,203</td>
+    <td style="text-align:right" class="pos">+16.83%</td>
+  </tr><tr>
+    <td>2026-05-26</td>
+    <td>3162 精確 <span class="badge b中信">中信</span></td>
+    <td><span class="badge b現股">現股</span></td>
+    <td><span class="badge b中信">中信</span></td>
+    <td style="text-align:right" class="pos">+6,936</td>
+    <td style="text-align:right" class="pos">+3.94%</td>
+  </tr><tr>
+    <td>2026-05-26</td>
+    <td>5483 中美晶 <span class="badge b國泰">國泰</span></td>
+    <td><span class="badge b現股">現股</span></td>
+    <td><span class="badge b國泰">國泰</span></td>
+    <td style="text-align:right" class="pos">+5,898</td>
+    <td style="text-align:right" class="pos">+3.85%</td>
+  </tr><tr>
+    <td>2026-05-22</td>
+    <td>2375 凱美 <span class="badge b中信">中信</span></td>
+    <td><span class="badge b現股">現股</span></td>
+    <td><span class="badge b中信">中信</span></td>
+    <td style="text-align:right" class="pos">+31,773</td>
+    <td style="text-align:right" class="pos">+31.73%</td>
+  </tr><tr>
+    <td>2026-05-15</td>
+    <td>2374 佳能 <span class="badge b國泰">國泰</span></td>
+    <td><span class="badge b現股">現股</span></td>
+    <td><span class="badge b國泰">國泰</span></td>
+    <td style="text-align:right" class="pos">+3,183</td>
+    <td style="text-align:right" class="pos">+3.95%</td>
+  </tr><tr>
+    <td>2026-05-15</td>
+    <td>3624 光頡 <span class="badge b中信">中信</span></td>
+    <td><span class="badge b現股">現股</span></td>
+    <td><span class="badge b中信">中信</span></td>
+    <td style="text-align:right" class="pos">+9,167</td>
+    <td style="text-align:right" class="pos">+13.68%</td>
+  </tr><tr>
+    <td>2026-05-06</td>
+    <td>4576大銀微 <span class="badge b中信">中信</span></td>
+    <td><span class="badge b現股">現股</span></td>
+    <td><span class="badge b中信">中信</span></td>
+    <td style="text-align:right" class="pos">+6,700</td>
+    <td style="text-align:right" class="pos">+3.09%</td>
+  </tr><tr>
+    <td>2026-05-06</td>
+    <td>3535晶彩科 <span class="badge b中信">中信</span></td>
+    <td><span class="badge b現股">現股</span></td>
+    <td><span class="badge b中信">中信</span></td>
+    <td style="text-align:right" class="pos">+2,198</td>
+    <td style="text-align:right" class="pos">+1.63%</td>
+  </tr></tbody>
+      </table></div>
+    </div>
+    <div class="section" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="sec-title" style="margin:0">補登交易（當沖／股利）</div>
+        <button class="btn btn-sm" onclick="toggleAddForm()">＋ 新增</button>
+      </div>
+      <div id="extra-add-form" style="display:none">
+        <div class="add-row" style="margin-bottom:10px">
+          <div class="field" style="width:115px"><label>日期</label><input type="date" id="nf-date"></div>
+          <div class="field" style="width:120px"><label>股票代碼</label><input type="text" id="nf-code" placeholder="2330台積電" oninput="nfRecalc()"></div>
+          <div class="field" style="width:68px"><label>帳戶</label><select id="nf-acct"><option value="">—</option><option>中信</option><option>國泰</option></select></div>
+          <div class="field" style="width:68px"><label>類型</label><select id="nf-type" onchange="nfTypeChange()"><option>當沖</option><option>股利</option></select></div>
+          <div id="nf-dt-fields" style="display:flex;gap:8px;flex-wrap:wrap">
+            <div class="field" style="width:60px"><label>張數</label><input type="number" id="nf-lots" placeholder="1" step="any" oninput="nfRecalc()"></div>
+            <div class="field" style="width:82px"><label>買進（元）</label><input type="number" id="nf-buy-price" placeholder="158" oninput="nfRecalc()"></div>
+            <div class="field" style="width:82px"><label>賣出（元）</label><input type="number" id="nf-sell-price" placeholder="161" oninput="nfRecalc()"></div>
+          </div>
+          <div id="nf-div-fields" style="display:none;gap:8px;flex-wrap:wrap">
+            <div class="field" style="width:120px"><label>股利金額（元）</label><input type="number" id="nf-div-amount" placeholder="3200" oninput="nfRecalc()"></div>
+          </div>
+        </div>
+        <div class="calc-chips">
+          <div class="chip"><div class="cl">損益</div><span id="nf-pnl" style="font-weight:500">—</span></div>
+          <div class="chip" id="nf-chip-ret"><div class="cl">報酬率</div><span id="nf-ret" style="font-weight:500">—</span></div>
+          <div class="chip" id="nf-chip-bt"><div class="cl">買進總額</div><span id="nf-bt">—</span></div>
+          <div class="chip" id="nf-chip-st"><div class="cl">賣出總額</div><span id="nf-st">—</span></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-p" onclick="addNew()">新增</button>
+          <button class="btn" onclick="clearNF()">清除</button>
+        </div>
+      </div>
+    </div>
+    <div class="year-bar" id="detail-ybar"><div class="ypill" onclick="setDYear('全部')">全部</div><div class="ypill active" onclick="setDYear('2026')">2026年</div><div class="ypill" onclick="setDYear('2025')">2025年</div><div class="ypill" onclick="setDYear('2024')">2024年</div><div class="ypill" onclick="setDYear('2023')">2023年</div><div class="ypill" onclick="setDYear('2022')">2022年</div><div class="ypill" onclick="setDYear('2021')">2021年</div><div class="ypill" onclick="setDYear('2020')">2020年</div></div>
+    <div class="controls">
+      <select id="fil-type" onchange="applyDF()"><option value="">全部類型</option><option>現股</option><option>當沖</option><option>股利</option><option>買進</option></select>
+      <input type="text" id="fil-code" placeholder="搜尋代碼" oninput="applyDF()" style="width:130px">
+      <button class="btn" id="btn-sort-order" onclick="toggleSortOrder()">日期 ↓ 最新</button>
+      <button class="btn" onclick="exportCSV()">↓ 匯出</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th style="width:88px">日期</th><th style="width:130px">股票代碼</th>
+        <th style="width:52px">類型</th><th style="width:52px">帳戶</th>
+        <th style="width:65px;text-align:right">股數</th>
+        <th style="width:85px;text-align:right">買進</th><th style="width:85px;text-align:right">賣出</th>
+        <th style="width:85px;text-align:right">損益</th><th style="width:68px;text-align:right">報酬率</th>
+      </tr></thead>
+      <tbody id="detail-body"><tr class="clickable" onclick="openEditRecord(137)">
+      <td>2026-06-04</td>
+      <td title="2356 英業達">2356 英業達</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b國泰">國泰</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">69,327</td>
+      <td style="text-align:right">79,131</td>
+      <td style="text-align:right" class="pos">+9,804</td>
+      <td style="text-align:right" class="pos">+14.14%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(135)">
+      <td>2026-05-28</td>
+      <td title="6147 頎邦">6147 頎邦</td>
+      <td><span class="badge b當沖">當沖</span></td>
+      <td><span class="badge b國泰">國泰</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">266,106</td>
+      <td style="text-align:right">284,460</td>
+      <td style="text-align:right" class="pos">+18,354</td>
+      <td style="text-align:right" class="pos">+6.90%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(136)">
+      <td>2026-05-28</td>
+      <td title="6175 立敦">6175 立敦</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">90,328</td>
+      <td style="text-align:right">105,531</td>
+      <td style="text-align:right" class="pos">+15,203</td>
+      <td style="text-align:right" class="pos">+16.83%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(133)">
+      <td>2026-05-26</td>
+      <td title="3162 精確">3162 精確</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">2000</td>
+      <td style="text-align:right">176,250</td>
+      <td style="text-align:right">183,186</td>
+      <td style="text-align:right" class="pos">+6,936</td>
+      <td style="text-align:right" class="pos">+3.94%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(134)">
+      <td>2026-05-26</td>
+      <td title="5483 中美晶">5483 中美晶</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b國泰">國泰</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">153,061</td>
+      <td style="text-align:right">158,959</td>
+      <td style="text-align:right" class="pos">+5,898</td>
+      <td style="text-align:right" class="pos">+3.85%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(132)">
+      <td>2026-05-22</td>
+      <td title="2375 凱美">2375 凱美</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">100,142</td>
+      <td style="text-align:right">131,915</td>
+      <td style="text-align:right" class="pos">+31,773</td>
+      <td style="text-align:right" class="pos">+31.73%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(130)">
+      <td>2026-05-15</td>
+      <td title="2374 佳能">2374 佳能</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b國泰">國泰</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">80,532</td>
+      <td style="text-align:right">83,715</td>
+      <td style="text-align:right" class="pos">+3,183</td>
+      <td style="text-align:right" class="pos">+3.95%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(131)">
+      <td>2026-05-15</td>
+      <td title="3624 光頡">3624 光頡</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">66,995</td>
+      <td style="text-align:right">76,162</td>
+      <td style="text-align:right" class="pos">+9,167</td>
+      <td style="text-align:right" class="pos">+13.68%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(127)">
+      <td>2026-05-06</td>
+      <td title="4576大銀微">4576大銀微</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">216,808</td>
+      <td style="text-align:right">223,508</td>
+      <td style="text-align:right" class="pos">+6,700</td>
+      <td style="text-align:right" class="pos">+3.09%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(128)">
+      <td>2026-05-06</td>
+      <td title="3535晶彩科">3535晶彩科</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">135,192</td>
+      <td style="text-align:right">137,390</td>
+      <td style="text-align:right" class="pos">+2,198</td>
+      <td style="text-align:right" class="pos">+1.63%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(129)">
+      <td>2026-05-06</td>
+      <td title="3535晶彩科">3535晶彩科</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b國泰">國泰</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">125,550</td>
+      <td style="text-align:right">137,034</td>
+      <td style="text-align:right" class="pos">+11,484</td>
+      <td style="text-align:right" class="pos">+9.15%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(126)">
+      <td>2026-04-28</td>
+      <td title="6234高僑">6234高僑</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">2000</td>
+      <td style="text-align:right">87,824</td>
+      <td style="text-align:right">88,010</td>
+      <td style="text-align:right" class="pos">+186</td>
+      <td style="text-align:right" class="pos">+0.21%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(124)">
+      <td>2026-04-23</td>
+      <td title="2486一詮">2486一詮</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">192,273</td>
+      <td style="text-align:right">215,045</td>
+      <td style="text-align:right" class="pos">+22,772</td>
+      <td style="text-align:right" class="pos">+11.84%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(125)">
+      <td>2026-04-23</td>
+      <td title="2409友達">2409友達</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b國泰">國泰</span></td>
+      <td style="text-align:right">3000</td>
+      <td style="text-align:right">48,117</td>
+      <td style="text-align:right">51,725</td>
+      <td style="text-align:right" class="pos">+3,608</td>
+      <td style="text-align:right" class="pos">+7.50%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(123)">
+      <td>2026-04-09</td>
+      <td title="3234光環">3234光環</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">2000</td>
+      <td style="text-align:right">188,668</td>
+      <td style="text-align:right">209,071</td>
+      <td style="text-align:right" class="pos">+20,403</td>
+      <td style="text-align:right" class="pos">+10.81%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(122)">
+      <td>2026-03-17</td>
+      <td title="3028增你強">3028增你強</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b國泰">國泰</span></td>
+      <td style="text-align:right">3000</td>
+      <td style="text-align:right">165,064</td>
+      <td style="text-align:right">169,224</td>
+      <td style="text-align:right" class="pos">+4,160</td>
+      <td style="text-align:right" class="pos">+2.52%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(121)">
+      <td>2026-03-11</td>
+      <td title="6146耕興">6146耕興</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">201,286</td>
+      <td style="text-align:right">197,124</td>
+      <td style="text-align:right" class="neg">-4,162</td>
+      <td style="text-align:right" class="neg">-2.07%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(120)">
+      <td>2026-02-26</td>
+      <td title="2758長興">2758長興</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b國泰">國泰</span></td>
+      <td style="text-align:right">1000</td>
+      <td style="text-align:right">61,524</td>
+      <td style="text-align:right">64,282</td>
+      <td style="text-align:right" class="pos">+2,758</td>
+      <td style="text-align:right" class="pos">+4.48%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(119)">
+      <td>2026-02-25</td>
+      <td title="3138耀登">3138耀登</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">2000</td>
+      <td style="text-align:right">344,490</td>
+      <td style="text-align:right">364,381</td>
+      <td style="text-align:right" class="pos">+19,891</td>
+      <td style="text-align:right" class="pos">+5.77%</td>
+    </tr><tr class="clickable" onclick="openEditRecord(117)">
+      <td>2026-02-11</td>
+      <td title="8249菱光">8249菱光</td>
+      <td><span class="badge b現股">現股</span></td>
+      <td><span class="badge b中信">中信</span></td>
+      <td style="text-align:right">10000</td>
+      <td style="text-align:right">607,363</td>
+      <td style="text-align:right">597,345</td>
+      <td style="text-align:right" class="neg">-10,018</td>
+      <td style="text-align:right" class="neg">-1.65%</td>
+    </tr></tbody>
+    </table></div>
+    <div class="pager">
+      <button class="btn btn-sm" onclick="prevPage()" id="btn-prev" disabled="">‹</button>
+      <span id="pager-info">1/2頁（31筆）</span>
+      <button class="btn btn-sm" onclick="nextPage()" id="btn-next">›</button>
+    </div>
+  </div>
+
+  <!-- 個股績效 -->
+  <div class="page" id="page-stocks">
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">個股績效統計</div>
+        <div class="controls" style="margin:0">
+          <select id="stock-year" onchange="renderStockStats()"><option value="全部">全部</option><option value="2026" selected="">2026年</option><option value="2025">2025年</option><option value="2024">2024年</option><option value="2023">2023年</option><option value="2022">2022年</option><option value="2021">2021年</option><option value="2020">2020年</option></select>
+          <input type="text" id="stock-search" placeholder="搜尋股票代碼" oninput="renderStockStats()" style="width:130px">
+          <select id="stock-sort" onchange="renderStockStats()">
+            <option value="pnl">依損益排序</option>
+            <option value="ret">依報酬率排序</option>
+            <option value="count">依交易次數排序</option>
+          </select>
+        </div>
+      </div>
+      <div id="stock-stats-body"><div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>股票代碼</th>
+      <th style="text-align:right">累計損益</th>
+      <th style="text-align:right">平均報酬率</th>
+      <th style="text-align:right">交易次數</th>
+      <th style="text-align:right">勝率</th>
+      <th style="text-align:right">單筆最高</th>
+      <th style="text-align:right">單筆最低</th>
+    </tr></thead>
+    <tbody><tr>
+        <td style="font-weight:500">4979華星光</td>
+        <td style="text-align:right;font-weight:500" class="pos">48,280</td>
+        <td style="text-align:right" class="pos">+8.12%</td>
+        <td style="text-align:right;color:var(--text3)">2</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">35,610</td>
+        <td style="text-align:right" class="pos">12,670</td>
+      </tr><tr>
+        <td style="font-weight:500">2375 凱美</td>
+        <td style="text-align:right;font-weight:500" class="pos">31,773</td>
+        <td style="text-align:right" class="pos">+31.73%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">31,773</td>
+        <td style="text-align:right" class="pos">31,773</td>
+      </tr><tr>
+        <td style="font-weight:500">2486一詮</td>
+        <td style="text-align:right;font-weight:500" class="pos">22,772</td>
+        <td style="text-align:right" class="pos">+11.84%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">22,772</td>
+        <td style="text-align:right" class="pos">22,772</td>
+      </tr><tr>
+        <td style="font-weight:500">3234光環</td>
+        <td style="text-align:right;font-weight:500" class="pos">20,403</td>
+        <td style="text-align:right" class="pos">+10.81%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">20,403</td>
+        <td style="text-align:right" class="pos">20,403</td>
+      </tr><tr>
+        <td style="font-weight:500">3138耀登</td>
+        <td style="text-align:right;font-weight:500" class="pos">19,891</td>
+        <td style="text-align:right" class="pos">+5.77%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">19,891</td>
+        <td style="text-align:right" class="pos">19,891</td>
+      </tr><tr>
+        <td style="font-weight:500">6147 頎邦</td>
+        <td style="text-align:right;font-weight:500" class="pos">18,354</td>
+        <td style="text-align:right" class="pos">+6.90%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">18,354</td>
+        <td style="text-align:right" class="pos">18,354</td>
+      </tr><tr>
+        <td style="font-weight:500">6175 立敦</td>
+        <td style="text-align:right;font-weight:500" class="pos">15,203</td>
+        <td style="text-align:right" class="pos">+16.83%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">15,203</td>
+        <td style="text-align:right" class="pos">15,203</td>
+      </tr><tr>
+        <td style="font-weight:500">3535晶彩科</td>
+        <td style="text-align:right;font-weight:500" class="pos">13,682</td>
+        <td style="text-align:right" class="pos">+5.39%</td>
+        <td style="text-align:right;color:var(--text3)">2</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">11,484</td>
+        <td style="text-align:right" class="pos">2,198</td>
+      </tr><tr>
+        <td style="font-weight:500">2356 英業達</td>
+        <td style="text-align:right;font-weight:500" class="pos">9,804</td>
+        <td style="text-align:right" class="pos">+14.14%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">9,804</td>
+        <td style="text-align:right" class="pos">9,804</td>
+      </tr><tr>
+        <td style="font-weight:500">3624 光頡</td>
+        <td style="text-align:right;font-weight:500" class="pos">9,167</td>
+        <td style="text-align:right" class="pos">+13.68%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">9,167</td>
+        <td style="text-align:right" class="pos">9,167</td>
+      </tr><tr>
+        <td style="font-weight:500">1303南亞</td>
+        <td style="text-align:right;font-weight:500" class="pos">8,970</td>
+        <td style="text-align:right" class="pos">+2.94%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">8,970</td>
+        <td style="text-align:right" class="pos">8,970</td>
+      </tr><tr>
+        <td style="font-weight:500">3162 精確</td>
+        <td style="text-align:right;font-weight:500" class="pos">6,936</td>
+        <td style="text-align:right" class="pos">+3.94%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">6,936</td>
+        <td style="text-align:right" class="pos">6,936</td>
+      </tr><tr>
+        <td style="font-weight:500">4576大銀微</td>
+        <td style="text-align:right;font-weight:500" class="pos">6,700</td>
+        <td style="text-align:right" class="pos">+3.09%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">6,700</td>
+        <td style="text-align:right" class="pos">6,700</td>
+      </tr><tr>
+        <td style="font-weight:500">5483 中美晶</td>
+        <td style="text-align:right;font-weight:500" class="pos">5,898</td>
+        <td style="text-align:right" class="pos">+3.85%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">5,898</td>
+        <td style="text-align:right" class="pos">5,898</td>
+      </tr><tr>
+        <td style="font-weight:500">3028增你強</td>
+        <td style="text-align:right;font-weight:500" class="pos">4,160</td>
+        <td style="text-align:right" class="pos">+2.52%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">4,160</td>
+        <td style="text-align:right" class="pos">4,160</td>
+      </tr><tr>
+        <td style="font-weight:500">2409友達</td>
+        <td style="text-align:right;font-weight:500" class="pos">3,608</td>
+        <td style="text-align:right" class="pos">+7.50%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">3,608</td>
+        <td style="text-align:right" class="pos">3,608</td>
+      </tr><tr>
+        <td style="font-weight:500">2374 佳能</td>
+        <td style="text-align:right;font-weight:500" class="pos">3,183</td>
+        <td style="text-align:right" class="pos">+3.95%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">3,183</td>
+        <td style="text-align:right" class="pos">3,183</td>
+      </tr><tr>
+        <td style="font-weight:500">2758長興</td>
+        <td style="text-align:right;font-weight:500" class="pos">2,758</td>
+        <td style="text-align:right" class="pos">+4.48%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">2,758</td>
+        <td style="text-align:right" class="pos">2,758</td>
+      </tr><tr>
+        <td style="font-weight:500">6190萬泰科</td>
+        <td style="text-align:right;font-weight:500" class="pos">2,643</td>
+        <td style="text-align:right" class="pos">+0.92%</td>
+        <td style="text-align:right;color:var(--text3)">2</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">2,210</td>
+        <td style="text-align:right" class="pos">433</td>
+      </tr><tr>
+        <td style="font-weight:500">6234高僑</td>
+        <td style="text-align:right;font-weight:500" class="pos">186</td>
+        <td style="text-align:right" class="pos">+0.21%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">100%</td>
+        <td style="text-align:right" class="pos">186</td>
+        <td style="text-align:right" class="pos">186</td>
+      </tr><tr>
+        <td style="font-weight:500">2313華通</td>
+        <td style="text-align:right;font-weight:500" class="neg">-583</td>
+        <td style="text-align:right" class="neg">-0.11%</td>
+        <td style="text-align:right;color:var(--text3)">2</td>
+        <td style="text-align:right;color:var(--text3)">50%</td>
+        <td style="text-align:right" class="pos">13,143</td>
+        <td style="text-align:right" class="neg">-13,726</td>
+      </tr><tr>
+        <td style="font-weight:500">1711永光</td>
+        <td style="text-align:right;font-weight:500" class="neg">-3,999</td>
+        <td style="text-align:right" class="neg">-1.72%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">0%</td>
+        <td style="text-align:right" class="neg">-3,999</td>
+        <td style="text-align:right" class="neg">-3,999</td>
+      </tr><tr>
+        <td style="font-weight:500">6146耕興</td>
+        <td style="text-align:right;font-weight:500" class="neg">-4,162</td>
+        <td style="text-align:right" class="neg">-2.07%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">0%</td>
+        <td style="text-align:right" class="neg">-4,162</td>
+        <td style="text-align:right" class="neg">-4,162</td>
+      </tr><tr>
+        <td style="font-weight:500">4989榮科</td>
+        <td style="text-align:right;font-weight:500" class="neg">-4,472</td>
+        <td style="text-align:right" class="neg">-2.20%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">0%</td>
+        <td style="text-align:right" class="neg">-4,472</td>
+        <td style="text-align:right" class="neg">-4,472</td>
+      </tr><tr>
+        <td style="font-weight:500">2441超豐</td>
+        <td style="text-align:right;font-weight:500" class="neg">-8,815</td>
+        <td style="text-align:right" class="neg">-2.86%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">0%</td>
+        <td style="text-align:right" class="neg">-8,815</td>
+        <td style="text-align:right" class="neg">-8,815</td>
+      </tr><tr>
+        <td style="font-weight:500">8249菱光</td>
+        <td style="text-align:right;font-weight:500" class="neg">-10,018</td>
+        <td style="text-align:right" class="neg">-1.65%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">0%</td>
+        <td style="text-align:right" class="neg">-10,018</td>
+        <td style="text-align:right" class="neg">-10,018</td>
+      </tr><tr>
+        <td style="font-weight:500">4764雙鍵</td>
+        <td style="text-align:right;font-weight:500" class="neg">-18,232</td>
+        <td style="text-align:right" class="neg">-4.45%</td>
+        <td style="text-align:right;color:var(--text3)">1</td>
+        <td style="text-align:right;color:var(--text3)">0%</td>
+        <td style="text-align:right" class="neg">-18,232</td>
+        <td style="text-align:right" class="neg">-18,232</td>
+      </tr></tbody>
+  </table></div></div>
+    </div>
+  </div>
+
+  <!-- 設定 -->
+  <div class="page active" id="page-settings">
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="sec-title" style="margin:0">券商帳戶設定</div><span style="font-size:12px;color:var(--text3)">可新增多個券商帳戶</span></div>
+      <div id="broker-list" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border2);flex-wrap:wrap">
+      <span class="badge b中信" style="font-size:12px;padding:3px 12px;min-width:60px;text-align:center">中信</span>
+      <div style="flex:1;min-width:120px"><div style="font-size:10px;color:var(--text4);margin-bottom:2px">現金餘額</div>
+        <div style="font-weight:500">12,000 元</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="font-size:10px;color:var(--text4)">手續費折扣</div>
+        <input type="number" value="10" min="1" max="10" step="0.1" style="width:65px;font-size:13px;padding:3px 6px;border:0.5px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);height:28px;text-align:center" onchange="updateDiscount('中信',this.value)">
+        <div style="font-size:11px;color:var(--text3)">折</div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="removeBroker('中信')" style="padding:2px 10px">刪除</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border2);flex-wrap:wrap">
+      <span class="badge b國泰" style="font-size:12px;padding:3px 12px;min-width:60px;text-align:center">國泰</span>
+      <div style="flex:1;min-width:120px"><div style="font-size:10px;color:var(--text4);margin-bottom:2px">現金餘額</div>
+        <div style="font-weight:500">6,472 元</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="font-size:10px;color:var(--text4)">手續費折扣</div>
+        <input type="number" value="2.8" min="1" max="10" step="0.1" style="width:65px;font-size:13px;padding:3px 6px;border:0.5px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);height:28px;text-align:center" onchange="updateDiscount('國泰',this.value)">
+        <div style="font-size:11px;color:var(--text3)">折</div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="removeBroker('國泰')" style="padding:2px 10px">刪除</button>
+    </div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:12px;background:var(--surface2);border-radius:8px">
+        <div class="field" style="width:120px"><label>券商名稱</label><input type="text" id="new-broker-name" placeholder="例如：富邦"></div>
+        <div class="field" style="width:130px"><label>初始現金（元）</label><input type="number" id="new-broker-cash" placeholder="0"></div>
+        <div class="field" style="width:90px"><label>手續費折扣</label>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number" id="new-broker-discount" placeholder="10" value="10" min="1" max="10" step="0.1" style="width:60px">
+            <span style="font-size:12px;color:var(--text3)">折</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-end"><button class="btn btn-p" onclick="addBroker()">新增券商</button></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-title">年度報酬目標</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+        <div class="field" style="width:150px">
+          <label>年初總資產（元）</label>
+          <input type="number" id="target-base" placeholder="750000" oninput="saveTargetSettings()">
+        </div>
+        <div class="field" style="width:120px">
+          <label>目標年化報酬率（%）</label>
+          <input type="number" id="target-rate" placeholder="15" step="0.1" oninput="saveTargetSettings()">
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text4)">設定後首頁會顯示目標達成進度。年初總資產請在每年1月初手動更新一次。</div>
+    </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.8">
+        產生一份功能完整但沒有任何個人資料的空白 HTML，可以直接給其他人使用。<br>
+        <span style="font-size:12px;color:var(--text4)">不會影響你目前使用的版本。</span>
+      </div>
+      <button class="btn btn-p" onclick="generateBlankVersion()">↓ 產生空白版本</button>
+    </div>
+    <div class="section">
+      <div class="sec-title">關於</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.8">
+        <div>股票投資儀表板 — 個人記帳工具</div>
+        <div style="color:var(--text4);font-size:12px;margin-top:4px">支援台灣證交所（上市）及證櫃（上櫃）股票</div>
+      </div>
+    </div>
+  </div>
+
+<div class="toast" id="toast" style="display: none;">已更新 4 檔現價（下午06:17）</div>
+
+<script>
+// ── 工具 ──
+function excelDate(n){if(!n||isNaN(n))return'';return new Date((n-25569)*86400000).toISOString().split('T')[0];}
+function getYear(r){const d=excelDate(r.date);return d?d.slice(0,4):'';}
+function getMonth(r){const d=excelDate(r.date);return d?d.slice(5,7):'';}
+function fmtPct(n){if(n===null||n===undefined||isNaN(n))return'—';return(n>=0?'+':'')+Number(n).toFixed(2)+'%';}
+function thisYear(){return new Date().getFullYear().toString();}
+function daysBetween(d1,d2){return Math.round((new Date(d2)-new Date(d1))/86400000);}
+function annualReturn(ret,days){if(!days||days<1)return null;return(Math.pow(1+ret/100,365/days)-1)*100;}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2500);}
+function cssVar(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+
+// ── 深色模式 ──
+function toggleDark(){
+  const html=document.documentElement;const dark=html.getAttribute('data-theme')==='dark';
+  html.setAttribute('data-theme',dark?'light':'dark');
+  document.querySelector('.dark-toggle').textContent=dark?'🌙':'☀️';
+  localStorage.setItem('theme',dark?'light':'dark');
+  setTimeout(()=>{
+    if(document.getElementById('page-history').classList.contains('active')){buildMonthChart();buildGrowthChart();}
+    buildSparklines();
+  },50);
+}
+(()=>{const t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.querySelector('.dark-toggle').textContent='☀️';})();
+
+// ── 資料 ──
+const RAW=[];
+
+let allData=[];
+let holdings=[];
+let accounts={};
+let fundLog=[];
+let dYear=thisYear(),dFiltered=[],dPage=0;
+const PER=20;
+let activeAcct='';
+let expandedHoldings=new Set();
+let expandedYears=new Set();
+const PIE_COLORS=['#c0392b','#e67e22','#8e44ad','#2980b9','#16a085','#d35400','#c0392b','#7f8c8d'];
+
+// ── 持股輔助 ──
+function hLots(h){return(h.batches||[]).reduce((s,b)=>s+b.lots,0)||h.lots||0;}
+function hCost(h){
+  if(h.batches?.length){const tl=hLots(h);if(!tl)return 0;return h.batches.reduce((s,b)=>s+b.lots*b.cost,0)/tl;}
+  return h.cost||0;
+}
+function hTotalCost(h){
+  if(h.batches?.length)return h.batches.reduce((s,b)=>s+b.lots*b.cost*1000,0);
+  return(h.lots||0)*(h.cost||0)*1000;
+}
+function hEarliestDate(h){
+  if(!h.batches?.length)return'';
+  return h.batches.map(b=>b.date).filter(Boolean).sort()[0]||'';
+}
+
+
+
+// ── 動態券商 Badge 顏色 ──
+const BROKER_COLORS=[
+  {bg:'#fff0e6',color:'#8b3a00',dbg:'#2e1800',dcolor:'#ffaa6e'},
+  {bg:'#e8f0ff',color:'#1a3a8b',dbg:'#0d1a3a',dcolor:'#6e9fff'},
+  {bg:'#e8ffe8',color:'#0a5a1a',dbg:'#0a2e0a',dcolor:'#6eff9f'},
+  {bg:'#fff8e0',color:'#7a5a00',dbg:'#2e2200',dcolor:'#ffd96e'},
+  {bg:'#f0e8ff',color:'#4a0a8b',dbg:'#1e0a3a',dcolor:'#b06eff'},
+  {bg:'#ffe8e8',color:'#8b0a1a',dbg:'#3a0a0a',dcolor:'#ff6e7a'},
+];
+function injectBrokerStyles(){
+  let el=document.getElementById('_broker-styles');
+  if(!el){el=document.createElement('style');el.id='_broker-styles';document.head.appendChild(el);}
+  const brokers=getBrokerNames();
+  el.textContent=brokers.map((b,i)=>{
+    const c=BROKER_COLORS[i%BROKER_COLORS.length];
+    return `.b${b}{background:${c.bg};color:${c.color}}[data-theme="dark"] .b${b}{background:${c.dbg};color:${c.dcolor}}`;
+  }).join('\n');
+}
+// ── 券商動態函式 ──
+function getBrokerNames(){return Object.keys(accounts);}
+
+function getBrokerOptions(selected=''){
+  return getBrokerNames().map(b=>`<option ${b===selected?'selected':''}>${b}</option>`).join('');
+}
+
+function buildAcctTabs(){
+  const tabs=document.getElementById('acct-sub-tabs');
+  if(!tabs)return;
+  const brokers=getBrokerNames();
+  tabs.innerHTML=[...brokers,'全部'].map((b,i)=>
+    `<div class="sub-tab${(activeAcct||brokers[0])===b?' active':''}" data-acct="${b}" onclick="switchAcct('${b}')">${b}</div>`
+  ).join('');
+}
+
+function buildBrokerSelects(){
+  // Update all broker dropdowns
+  ['fd-acct','h-acct'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.innerHTML=getBrokerOptions();
+  });
+  const nf=document.getElementById('nf-acct');
+  if(nf)nf.innerHTML='<option value="">—</option>'+getBrokerOptions();
+}
+
+function renderBrokerList(){
+  const el=document.getElementById('broker-list');if(!el)return;
+  const brokers=getBrokerNames();
+  if(!brokers.length){
+    el.innerHTML='<div style="color:var(--text4);font-size:13px;padding:8px 0">尚無券商，請新增</div>';return;
+  }
+  el.innerHTML=brokers.map(b=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border2);flex-wrap:wrap">
+      <span class="badge b${b}" style="font-size:12px;padding:3px 12px;min-width:60px;text-align:center">${b}</span>
+      <div style="flex:1;min-width:120px"><div style="font-size:10px;color:var(--text4);margin-bottom:2px">現金餘額</div>
+        <div style="font-weight:500">${accounts[b].cash.toLocaleString()} 元</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="font-size:10px;color:var(--text4)">手續費折扣</div>
+        <input type="number" value="${accounts[b].discount||10}" min="1" max="10" step="0.1"
+          style="width:65px;font-size:13px;padding:3px 6px;border:0.5px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);height:28px;text-align:center"
+          onchange="updateDiscount('${b}',this.value)">
+        <div style="font-size:11px;color:var(--text3)">折</div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="removeBroker('${b}')" style="padding:2px 10px">刪除</button>
+    </div>`).join('');
+}
+
+function updateDiscount(acct,val){
+  const d=parseFloat(val)||10;
+  accounts[acct].discount=Math.min(10,Math.max(0.1,d));
+  saveData();
+  showToast(`${acct} 手續費折扣已更新為 ${accounts[acct].discount} 折`);
+}
+
+function addBroker(){
+  const name=document.getElementById('new-broker-name').value.trim();
+  const cash=parseFloat(document.getElementById('new-broker-cash').value)||0;
+  const discount=parseFloat(document.getElementById('new-broker-discount').value)||10;
+  if(!name){showToast('請填券商名稱');return;}
+  if(accounts[name]){showToast('此券商已存在');return;}
+  accounts[name]={cash,discount:Math.min(10,Math.max(0.1,discount))};
+  if(!activeAcct)activeAcct=name;
+  document.getElementById('new-broker-name').value='';
+  document.getElementById('new-broker-cash').value='';
+  document.getElementById('new-broker-discount').value='10';
+  injectBrokerStyles();saveData();renderBrokerList();buildAcctTabs();buildBrokerSelects();buildAssetOverview();
+  showToast('已新增券商：'+name);
+}
+
+function removeBroker(name){
+  if(holdings.some(h=>h.acct===name)){showToast('此券商仍有持股，請先移除');return;}
+  if(!confirm(`確定刪除券商「${name}」？`))return;
+  delete accounts[name];
+  if(activeAcct===name)activeAcct=getBrokerNames()[0]||'';
+  injectBrokerStyles();saveData();renderBrokerList();buildAcctTabs();buildBrokerSelects();buildAssetOverview();
+  showToast('已刪除：'+name);
+}
+
+// ── 頁籤 ──
+function switchPage(p){
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const idx={home:0,history:1,detail:2,stocks:3,settings:4};
+  document.querySelectorAll('.nav-tab')[idx[p]].classList.add('active');
+  if(p==='home')buildHome();
+  if(p==='history'){buildHistory();buildMonthlySummary();setTimeout(()=>{buildMonthChart();buildGrowthChart();},60);}
+  if(p==='detail'){buildRecentTrades();buildYBar();applyDF();}
+  if(p==='stocks'){buildStockYearBar();renderStockStats();}
+  if(p==='settings'){renderBrokerList();loadTargetSettings();}
+}
+
+// ── 首頁 ──
+function buildHome(){buildAssetOverview();buildToday();buildAnnualTarget();buildAcctTabs();buildBrokerSelects();renderHoldings();}
+
+// ── 資產總覽 ──
+function buildAssetOverview(){
+  const el=document.getElementById('asset-overview');if(!el)return;
+  const rows=Object.keys(accounts).map(a=>{
+    const cash=accounts[a].cash;
+    const mkt=holdings.filter(h=>h.acct===a).reduce((s,h)=>h.price?s+hLots(h)*h.price*1000:s,0);
+    const cost=holdings.filter(h=>h.acct===a).reduce((s,h)=>s+hTotalCost(h),0);
+    const upnl=mkt-cost;
+    return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border2)">
+      <span class="badge b${a}" style="font-size:12px;padding:3px 12px;min-width:44px;text-align:center">${a}</span>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;flex:1">
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">現金</div><div style="font-weight:500">${cash.toLocaleString()}</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">持股市值</div><div style="font-weight:500">${mkt?mkt.toLocaleString():'—'}</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">總資產</div><div style="font-weight:500;font-size:16px">${(cash+mkt).toLocaleString()}</div></div>
+        ${mkt?`<div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">未實現損益</div><div style="font-weight:500" class="${upnl>=0?'pos':'neg'}">${upnl>=0?'+':''}${upnl.toLocaleString()}</div></div>`:''}
+      </div>
+    </div>`;
+  });
+  const tCash=Object.values(accounts).reduce((s,a)=>s+a.cash,0);
+  const tMkt=holdings.reduce((s,h)=>h.price?s+hLots(h)*h.price*1000:s,0);
+  const tCost=holdings.reduce((s,h)=>s+hTotalCost(h),0);
+  const tU=tMkt-tCost;
+  el.innerHTML=rows.join('')+`
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0">
+      <span style="font-size:12px;font-weight:500;color:var(--text2);min-width:44px;text-align:center">合計</span>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;flex:1">
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">現金合計</div><div style="font-weight:500">${tCash.toLocaleString()}</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">持股市值</div><div style="font-weight:500">${tMkt?tMkt.toLocaleString():'—'}</div></div>
+        <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">總資產</div><div style="font-weight:500;font-size:18px">${(tCash+tMkt).toLocaleString()}</div></div>
+        ${tMkt?`<div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">未實現損益</div><div style="font-weight:500" class="${tU>=0?'pos':'neg'}">${tU>=0?'+':''}${tU.toLocaleString()}</div></div>`:''}
+      </div>
+    </div>`;
+}
+
+// ── 今年收益 ──
+function buildToday(){
+  const yr=thisYear();
+  document.getElementById('hdr-sub').textContent=yr+'年';
+  const src=allData.filter(r=>getYear(r)===yr);
+  const s=src.filter(r=>r.type==='現股').reduce((a,r)=>a+r.pnl,0);
+  const d=src.filter(r=>r.type==='當沖').reduce((a,r)=>a+r.pnl,0);
+  const dv=src.filter(r=>r.type==='股利').reduce((a,r)=>a+r.pnl,0);
+  const tot=s+d+dv;
+  const tr=src.filter(r=>r.type!=='股利'&&r.type!=='買進');
+  const wr=tr.length?Math.round(tr.filter(r=>r.pnl>0).length/tr.length*100):0;
+  const totalBuy=src.filter(r=>r.type!=='股利').reduce((a,r)=>a+(r.buy||0),0);
+  const capitalRet=totalBuy?tot/totalBuy*100:null;
+  document.getElementById('today-cards').innerHTML=`
+    <div class="card big hl" id="card-total"><div class="lbl">今年總收益</div><div class="val ${tot>=0?'pos':'neg'}">${tot>=0?'+':''}${tot.toLocaleString()}</div></div>
+    <div class="card" id="card-stock"><div class="lbl">現股</div><div class="val ${s>=0?'pos':'neg'}">${s>=0?'+':''}${s.toLocaleString()}</div></div>
+    <div class="card" id="card-day"><div class="lbl">當沖</div><div class="val ${d>=0?'pos':'neg'}">${d>=0?'+':''}${d.toLocaleString()}</div></div>
+    <div class="card" id="card-div"><div class="lbl">現金股利</div><div class="val pos">+${dv.toLocaleString()}</div></div>
+    ${capitalRet!==null?`<div class="card" id="card-cr"><div class="lbl">資金報酬率</div><div class="val ${capitalRet>=0?'pos':'neg'}">${capitalRet>=0?'+':''}${capitalRet.toFixed(2)}%</div></div>`:''}`;
+  setTimeout(buildSparklines,50);
+}
+
+function buildSparklines(){
+  const yr=thisYear();
+  const src=allData.filter(r=>getYear(r)===yr);
+  const months=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  function spark(id,vals){
+    const card=document.getElementById(id);if(!card)return;
+    let c=card.querySelector('canvas');
+    if(!c){c=document.createElement('canvas');c.style.cssText='position:absolute;bottom:0;left:0;right:0;opacity:0.4;pointer-events:none';card.appendChild(c);}
+    const W=card.offsetWidth,H=36;
+    c.width=W*2;c.height=H*2;c.style.height=H+'px';c.style.width='100%';
+    const ctx=c.getContext('2d');ctx.scale(2,2);
+    const maxV=Math.max(...vals,1),minV=Math.min(...vals,0),range=maxV-minV||1;
+    const gap=W/vals.length;
+    ctx.beginPath();
+    vals.forEach((v,i)=>{const x=(i+.5)*gap,y=H-(v-minV)/range*H*.85-2;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.strokeStyle='#e05a5a';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke();
+    ctx.lineTo((vals.length-.5)*gap,H);ctx.lineTo(.5*gap,H);ctx.closePath();
+    ctx.fillStyle='rgba(224,90,90,0.1)';ctx.fill();
+  }
+  spark('card-total',months.map(m=>src.reduce((s,r)=>getMonth(r)===m?s+r.pnl:s,0)));
+  spark('card-stock',months.map(m=>src.filter(r=>r.type==='現股').reduce((s,r)=>getMonth(r)===m?s+r.pnl:s,0)));
+  spark('card-day',months.map(m=>src.filter(r=>r.type==='當沖').reduce((s,r)=>getMonth(r)===m?s+r.pnl:s,0)));
+  spark('card-div',months.map(m=>src.filter(r=>r.type==='股利').reduce((s,r)=>getMonth(r)===m?s+r.pnl:s,0)));
+}
+
+// ── 持股 ──
+function switchAcct(a){
+  activeAcct=a;
+  buildAcctTabs();document.querySelectorAll('#acct-sub-tabs .sub-tab').forEach(e=>e.classList.toggle('active',e.dataset.acct===a));
+  renderHoldings();
+}
+
+function renderHoldings(){
+  const src=activeAcct==='全部'?holdings:holdings.filter(h=>h.acct===activeAcct);
+  const body=document.getElementById('holdings-body');
+  const pieWrap=document.getElementById('holding-pie-wrap');
+  if(holdings.some(h=>h.price>0)){pieWrap.style.display='block';buildPieChart();}
+  else pieWrap.style.display='none';
+  if(!src.length){
+    body.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="icon">📋</div><p>尚無持股記錄</p><button class="btn btn-p btn-sm" onclick="openAddHoldingModal()">＋ 新增持股</button></div></td></tr>`;
+    document.getElementById('holdings-foot').innerHTML='';return;
+  }
+  const today=new Date().toISOString().split('T')[0];
+  let tCost=0,tMkt=0;
+  const rows=[];
+  src.forEach(h=>{
+    const ri=holdings.indexOf(h);
+    const lots=hLots(h),cost=hCost(h),ct=hTotalCost(h);
+    const mkt=h.price?lots*h.price*1000:0;
+    const upnl=h.price?mkt-ct:null,upct=h.price&&ct?upnl/ct*100:null;
+    if(h.price){tCost+=ct;tMkt+=mkt;}
+    const pc=upnl===null?'':upnl>=0?'pos':'neg';
+    const hasBatches=h.batches?.length>1;
+    const isExp=expandedHoldings.has(ri);
+    const priceCell=h.price
+      ?`<span class="price-display" onclick="editPrice(${ri})" title="點擊修改">${h.price.toLocaleString()}</span>`
+      :`<span class="price-display" onclick="editPrice(${ri})" style="color:var(--text4)">填現價</span>`;
+    rows.push(`<tr>
+      <td>
+        ${hasBatches?`<button onclick="toggleExpandH(${ri})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0 4px 0 0;vertical-align:middle">${isExp?'▼':'▶'}</button>`:'<span style="display:inline-block;width:14px"></span>'}
+        <span class="badge b${h.acct}" style="margin-right:4px">${h.acct}</span>${h.code}
+      </td>
+      <td style="text-align:right">${lots}</td>
+      <td style="text-align:right">${cost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td style="text-align:right">${ct.toLocaleString()}</td>
+      <td style="text-align:right" id="price-cell-${ri}">${priceCell}</td>
+      <td style="text-align:right">${mkt?mkt.toLocaleString():'—'}</td>
+      <td style="text-align:right" class="${pc}">${upnl===null?'—':(upnl>=0?'+':'')+upnl.toLocaleString()+'<br><span style="font-size:11px">'+fmtPct(upct)+'</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm btn-p" onclick="openSellModal(${ri})" style="padding:2px 8px;margin-right:3px">賣出</button>
+        <button class="btn btn-sm" onclick="openEditHolding(${ri})" style="padding:2px 8px">修改</button>
+      </td>
+    </tr>`);
+    if(isExp&&h.batches){
+      h.batches.forEach((b,bi)=>{
+        const days=b.date?daysBetween(b.date,today):null;
+        rows.push(`<tr class="batch-row">
+          <td style="padding-left:30px">${b.date||'—'}${days!==null?` <span style="color:var(--text4)">(${days}天)</span>`:''}</td>
+          <td style="text-align:right">${b.lots} 張</td>
+          <td style="text-align:right">${b.cost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+          <td style="text-align:right">${(b.lots*b.cost*1000).toLocaleString()}</td>
+          <td></td><td></td><td></td>
+          <td><button class="btn btn-sm btn-danger" onclick="deleteBatch(${ri},${bi})" style="padding:2px 8px;font-size:11px;height:26px">刪批</button></td>
+        </tr>`);
+      });
+      rows.push(`<tr class="batch-add-row">
+        <td colspan="4">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-left:18px">
+            <span style="font-size:11px;color:var(--text4)">＋ 新增批次</span>
+            <input type="date" id="nb-date-${ri}" style="font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);height:27px;width:120px">
+            <input type="number" id="nb-lots-${ri}" placeholder="張數" style="font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);height:27px;width:58px">
+            <input type="number" id="nb-cost-${ri}" placeholder="成本/股" step="0.01" style="font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);height:27px;width:78px">
+            <button class="btn btn-sm btn-p" onclick="addBatch(${ri})" style="padding:2px 10px;font-size:12px">加入</button>
+          </div>
+        </td>
+        <td colspan="4"></td>
+      </tr>`);
+    }
+  });
+  body.innerHTML=rows.join('');
+  const tu=tMkt-tCost;
+  document.getElementById('holdings-foot').innerHTML=tCost?`<tr>
+    <td colspan="3">合計（有現價）</td>
+    <td style="text-align:right">${tCost.toLocaleString()}</td><td></td>
+    <td style="text-align:right">${tMkt.toLocaleString()}</td>
+    <td style="text-align:right" class="${tu>=0?'pos':'neg'}">${tu>=0?'+':''}${tu.toLocaleString()} (${fmtPct(tu/tCost*100)})</td>
+    <td></td>
+  </tr>`:'';
+}
+
+function toggleExpandH(ri){if(expandedHoldings.has(ri))expandedHoldings.delete(ri);else expandedHoldings.add(ri);renderHoldings();}
+function editPrice(ri){
+  const cell=document.getElementById(`price-cell-${ri}`);if(!cell)return;
+  const h=holdings[ri];
+  cell.innerHTML=`<input class="price-input" type="number" value="${h.price||''}" placeholder="填現價" autofocus onblur="commitPrice(${ri},this.value)" onkeydown="if(event.key==='Enter')this.blur()">`;
+  cell.querySelector('input').focus();
+}
+function commitPrice(ri,v){holdings[ri].price=parseFloat(v)||0;saveData();renderHoldings();buildAssetOverview();}
+function updPrice(ri,v){commitPrice(ri,v);}
+function addBatch(ri){
+  const date=document.getElementById(`nb-date-${ri}`)?.value||'';
+  const lots=parseFloat(document.getElementById(`nb-lots-${ri}`)?.value)||0;
+  const cost=parseFloat(document.getElementById(`nb-cost-${ri}`)?.value)||0;
+  if(!lots||!cost){showToast('請填張數和成本');return;}
+  if(!holdings[ri].batches)holdings[ri].batches=[{date:'',lots:holdings[ri].lots||0,cost:holdings[ri].cost||0}];
+  holdings[ri].batches.push({date,lots,cost});
+  // 同步新增買進記錄到明細
+  if(date){
+    const serial=Math.round((new Date(date)-new Date('1899-12-30'))/86400000);
+    const buyRec={date:serial,code:holdings[ri].code,type:'買進',shares:lots*1000,buy:lots*1000*cost,sell:0,pnl:0,ret:null,acct:holdings[ri].acct};
+    allData.push(buyRec);allData.sort((a,b)=>a.date-b.date);
+  }
+  saveData();renderHoldings();buildAssetOverview();showToast('已新增批次');
+}
+function deleteBatch(ri,bi){
+  if(holdings[ri].batches.length===1){showToast('最後一批請用修改');return;}
+  const b=holdings[ri].batches[bi];
+  const refund=b.lots*b.cost*1000;
+  const acct=holdings[ri].acct;
+  if(refund>0&&accounts[acct]){
+    accounts[acct].cash+=refund;
+    const today=new Date().toISOString().split('T')[0];
+    fundLog.unshift({date:today,acct,type:'in',amount:refund,delta:refund,note:holdings[ri].code+' 刪除批次退款'});
+  }
+  holdings[ri].batches.splice(bi,1);
+  saveData();renderHoldings();buildAssetOverview();renderFundLog();
+  showToast(`已刪除批次，退回 ${refund.toLocaleString()} 元`);
+}
+
+// ── 圓餅圖 ──
+function buildPieChart(){
+  const canvas=document.getElementById('pieChart');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=130,H=130;canvas.width=W*2;canvas.height=H*2;canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.scale(2,2);
+  const src=activeAcct==='全部'?holdings:holdings.filter(h=>h.acct===activeAcct);
+  const withPrice=src.filter(h=>h.price>0);
+  if(!withPrice.length)return;
+  const total=withPrice.reduce((s,h)=>s+hLots(h)*h.price*1000,0);
+  let startAngle=-Math.PI/2;
+  const cx=W/2,cy=H/2,r=55;
+  const legend=[];
+  withPrice.forEach((h,i)=>{
+    const val=hLots(h)*h.price*1000;
+    const angle=val/total*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,startAngle,startAngle+angle);
+    ctx.closePath();ctx.fillStyle=PIE_COLORS[i%PIE_COLORS.length];ctx.fill();
+    legend.push({code:h.code.replace(/^\d+/,'').trim(),pct:Math.round(val/total*100),color:PIE_COLORS[i%PIE_COLORS.length]});
+    startAngle+=angle;
+  });
+  ctx.beginPath();ctx.arc(cx,cy,30,0,Math.PI*2);ctx.fillStyle=cssVar('--surface');ctx.fill();
+  document.getElementById('pie-legend').innerHTML=legend.map(l=>
+    `<div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:${l.color};flex-shrink:0"></div><span style="color:var(--text2)">${l.code}</span><span style="color:var(--text3);margin-left:auto;font-size:11px">${l.pct}%</span></div>`
+  ).join('');
+}
+
+// ── 新增持股 ──
+function openAddHoldingModal(){
+  openModal(`
+    <h3>新增持股</h3><div class="sub"></div>
+    <div class="modal-fields">
+      <div class="field"><label>帳戶</label><select id="h-acct">${getBrokerOptions()}</select></div>
+      <div class="field">
+        <label>股票代碼</label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="h-code-num" placeholder="輸入代碼如 6175" style="width:130px" oninput="clearStockName()" onblur="lookupStockName()">
+          <input type="text" id="h-code-name" placeholder="名稱自動帶出" style="flex:1;color:var(--text3)" readonly>
+        </div>
+      </div>
+      <div class="field"><label>張數</label><input type="number" id="h-lots" placeholder="1" step="any"></div>
+      <div class="field"><label>成本（每股）</label><input type="number" id="h-cost" placeholder="29.5" step="0.01"></div>
+      <div class="field"><label>買進日期（選填）</label><input type="date" id="h-buydate"></div>
+    </div>
+    <div id="h-lookup-status" style="font-size:12px;color:var(--text3);margin-bottom:8px;min-height:16px"></div>
+    <div class="modal-btns">
+      <button class="btn btn-sm" onclick="closeModal()">取消</button>
+      <button class="btn btn-sm btn-p" onclick="confirmAddHolding()">新增</button>
+    </div>`);
+}
+
+async function lookupStockName(){
+  const num=document.getElementById('h-code-num')?.value.trim();
+  if(!num||num.length<4)return;
+  const status=document.getElementById('h-lookup-status');
+  const nameEl=document.getElementById('h-code-name');
+  if(status)status.textContent='查詢中...';
+  const name=await fetchStockName(num);
+  if(name){
+    if(nameEl)nameEl.value=name;
+    if(status)status.textContent=`✓ ${num} ${name}`;
+  }else{
+    if(nameEl)nameEl.value='';
+    if(status)status.textContent='找不到此代碼，請確認或手動輸入名稱';
+    if(nameEl)nameEl.removeAttribute('readonly');
+    if(nameEl)nameEl.placeholder='手動輸入名稱';
+  }
+}
+function clearStockName(){
+  const nameEl=document.getElementById('h-code-name');
+  const status=document.getElementById('h-lookup-status');
+  if(nameEl){nameEl.value='';nameEl.setAttribute('readonly','');nameEl.placeholder='名稱自動帶出';}
+  if(status)status.textContent='';
+}
+async function fetchStockName(code){
+  // 先試上市
+  try{
+    const res=await fetch(`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_${code}.tw&json=1&delay=0`);
+    const data=await res.json();
+    const item=data?.msgArray?.[0];
+    if(item?.n)return item.n;
+  }catch(e){}
+  // 再試上櫃
+  try{
+    const res=await fetch(`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=otc_${code}.tw&json=1&delay=0`);
+    const data=await res.json();
+    const item=data?.msgArray?.[0];
+    if(item?.n)return item.n;
+  }catch(e){}
+  return null;
+}
+function confirmAddHolding(){
+  const acct=document.getElementById('h-acct').value;
+  const codeNum=document.getElementById('h-code-num').value.trim();
+  const codeName=document.getElementById('h-code-name').value.trim();
+  const code=codeNum+(codeName?' '+codeName:'');
+  const lots=parseFloat(document.getElementById('h-lots').value)||0;
+  const cost=parseFloat(document.getElementById('h-cost').value)||0;
+  const buyDate=document.getElementById('h-buydate').value;
+  if(!codeNum||!lots){showToast('請填代碼和張數');return;}
+  // 比對時只看代碼數字部分，避免名稱格式不同造成重複
+  const ei=holdings.findIndex(h=>h.acct===acct&&h.code.match(/^\d+/)?.[0]===codeNum);
+  if(ei>=0){
+    // 更新名稱（如果有帶出）
+    if(codeName)holdings[ei].code=code;
+    if(!holdings[ei].batches)holdings[ei].batches=[{date:'',lots:holdings[ei].lots||0,cost:holdings[ei].cost||0}];
+    holdings[ei].batches.push({date:buyDate,lots,cost});
+    expandedHoldings.add(ei);
+  }else{
+    holdings.push({acct,code,price:0,batches:[{date:buyDate,lots,cost}]});
+  }
+  // 同步買進記錄到明細
+  if(buyDate){
+    const serial=Math.round((new Date(buyDate)-new Date('1899-12-30'))/86400000);
+    allData.push({date:serial,code,type:'買進',shares:lots*1000,buy:lots*1000*cost,sell:0,pnl:0,ret:null,acct});
+    allData.sort((a,b)=>a.date-b.date);
+  }
+  // 扣除帳戶現金
+  if(accounts[acct]){
+    const deduct=lots*1000*cost;
+    accounts[acct].cash-=deduct;
+    if(buyDate)fundLog.unshift({date:buyDate,acct,type:'buy',amount:deduct,delta:-deduct,note:code});
+    closeModal();saveData();renderHoldings();buildAssetOverview();
+    showToast(`已新增 ${code}，${acct}現金扣除 ${deduct.toLocaleString()} 元`);
+  }else{
+    closeModal();saveData();renderHoldings();buildAssetOverview();
+    showToast('已新增：'+code);
+  }
+}
+
+// ── 修改持股 ──
+function openEditHolding(ri){
+  const h=holdings[ri];
+  const batchRows=(h.batches||[]).map((b,bi)=>`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;background:var(--surface2);padding:6px 8px;border-radius:6px">
+      <span style="font-size:11px;color:var(--text3);min-width:16px">${bi+1}.</span>
+      <input type="date" id="eb-date-${bi}" value="${b.date||''}" style="font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);height:28px;width:115px">
+      <input type="number" id="eb-lots-${bi}" value="${b.lots}" step="any" placeholder="張數" style="font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);height:28px;width:58px">
+      <input type="number" id="eb-cost-${bi}" value="${b.cost}" step="0.01" placeholder="成本/股" style="font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);height:28px;width:78px">
+    </div>`).join('');
+  openModal(`
+    <h3>修改持股</h3><div class="sub"></div>
+    <div class="modal-fields" style="margin-bottom:10px">
+      <div class="field"><label>帳戶</label><select id="em-acct">${getBrokerOptions(h.acct)}</select></div>
+      <div class="field"><label>股票代碼</label><input type="text" id="em-code" value="${h.code}"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px">批次明細（日期／張數／成本每股）</div>
+    <div id="em-batches">${batchRows}</div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="btn btn-sm btn-danger" onclick="deleteHolding(${ri})">刪除持股</button>
+      <button class="btn btn-sm" onclick="closeModal()">取消</button>
+      <button class="btn btn-sm btn-p" onclick="saveEditHolding(${ri})">儲存</button>
+    </div>`,'wide');
+}
+function saveEditHolding(ri){
+  const acct=document.getElementById('em-acct').value;
+  const code=document.getElementById('em-code').value.trim();
+  if(!code){showToast('請填代碼');return;}
+  const oldCost=hTotalCost(holdings[ri]);
+  const newBatches=(holdings[ri].batches||[]).map((b,bi)=>({
+    date:document.getElementById(`eb-date-${bi}`)?.value||'',
+    lots:parseFloat(document.getElementById(`eb-lots-${bi}`)?.value)||0,
+    cost:parseFloat(document.getElementById(`eb-cost-${bi}`)?.value)||0,
+  })).filter(b=>b.lots>0);
+  const newCost=newBatches.reduce((s,b)=>s+b.lots*b.cost*1000,0);
+  const diff=newCost-oldCost;
+  if(diff!==0&&accounts[acct]){
+    accounts[acct].cash-=diff;
+    const today=new Date().toISOString().split('T')[0];
+    fundLog.unshift({date:today,acct,type:diff>0?'out':'in',amount:Math.abs(diff),delta:-diff,note:code+' 修改成本調整'});
+  }
+  holdings[ri]={...holdings[ri],acct,code,batches:newBatches};
+  closeModal();saveData();renderHoldings();buildAssetOverview();renderFundLog();
+  showToast('已更新：'+code+(diff!==0?`，現金調整 ${diff>0?'-':'+'}${Math.abs(diff).toLocaleString()}`:''));
+}
+function deleteHolding(ri){
+  const h=holdings[ri];
+  const totalCost=hTotalCost(h);
+  const acct=h.acct;
+  if(!confirm(`確定刪除 ${h.code}？\n持有成本 ${totalCost.toLocaleString()} 元將退回 ${acct} 帳戶（如有設定）`))return;
+  // 退回買進成本
+  if(accounts[acct]&&totalCost>0){
+    accounts[acct].cash+=totalCost;
+    const today=new Date().toISOString().split('T')[0];
+    fundLog.unshift({date:today,acct,type:'in',amount:totalCost,delta:totalCost,note:h.code+' 刪除退款'});
+  }
+  holdings.splice(ri,1);expandedHoldings.delete(ri);
+  closeModal();saveData();renderHoldings();buildAssetOverview();renderFundLog();
+  showToast(`已刪除 ${h.code}，退回 ${totalCost.toLocaleString()} 元`);
+}
+
+// ── 賣出 Modal ──
+function openSellModal(ri){
+  const h=holdings[ri];const lots=hLots(h),cost=hCost(h);
+  const today=new Date().toISOString().split('T')[0];
+  const earliest=hEarliestDate(h);
+  openModal(`
+    <h3>賣出 ${h.code}</h3>
+    <div class="sub">持有 ${lots} 張　平均成本 ${cost.toFixed(2)} 元/股${earliest?'　最早買進 '+earliest:''}</div>
+    <div class="modal-fields">
+      <div class="field"><label>賣出日期</label><input type="date" id="sm-date" value="${today}"></div>
+      <div class="field"><label>賣出張數（最多 ${lots} 張）</label><input type="number" id="sm-lots" value="${lots}" min="0.001" max="${lots}" step="any" oninput="updateSellCalc(${ri})"></div>
+      <div class="field"><label>賣出價格（元/股）</label><input type="number" id="sm-price" value="${h.price||cost.toFixed(2)}" oninput="updateSellCalc(${ri})"></div>
+    </div>
+    <div class="sm-calc">
+      <div><div class="cl">賣出總額</div><span id="sm-total">—</span></div>
+      <div><div class="cl">損益</div><span id="sm-pnl" style="font-weight:500">—</span></div>
+      <div><div class="cl">報酬率</div><span id="sm-ret">—</span></div>
+      <div><div class="cl">手續費+交易稅</div><span id="sm-fee">—</span></div>
+      <div><div class="cl">實際損益（含費）</div><span id="sm-net" style="font-weight:500">—</span></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-sm" onclick="closeModal()">取消</button>
+      <button class="btn btn-sm btn-p" onclick="confirmSell(${ri})">確認賣出</button>
+    </div>`);
+  updateSellCalc(ri);
+}
+function updateSellCalc(ri){
+  const h=holdings[ri];const cost=hCost(h);const earliest=hEarliestDate(h);
+  const sl=parseFloat(document.getElementById('sm-lots')?.value)||0;
+  const sp=parseFloat(document.getElementById('sm-price')?.value)||0;
+  const sDate=document.getElementById('sm-date')?.value;
+  const st=sl*1000*sp,bt=sl*1000*cost,pnl=st-bt,ret=bt?pnl/bt*100:0;
+  // 手續費計算
+  const discount=(accounts[h.acct]?.discount||10)/10;
+  const RATE=0.001425;
+  const MIN_FEE=20;
+  const buyFee=Math.max(Math.round(bt*RATE*discount),MIN_FEE);
+  const sellFee=Math.max(Math.round(st*RATE*discount),MIN_FEE);
+  const isSameDay=earliest&&sDate&&earliest===sDate;
+  const taxRate=isSameDay?0.0015:0.003;
+  const tax=Math.round(st*taxRate);
+  const totalFee=buyFee+sellFee+tax;
+  const netPnl=pnl-totalFee;
+  const netRet=bt?(netPnl/bt*100):0;
+  const se=document.getElementById('sm-total'),pe=document.getElementById('sm-pnl'),re=document.getElementById('sm-ret');
+  const fe=document.getElementById('sm-fee'),ne=document.getElementById('sm-net'),ae=document.getElementById('sm-ann');
+  if(se)se.textContent=st.toLocaleString()+' 元';
+  if(pe){pe.textContent=(pnl>=0?'+':'')+pnl.toLocaleString()+' 元';pe.style.color=pnl>=0?'var(--pos)':'var(--neg)';}
+  if(re){re.textContent=(ret>=0?'+':'')+ret.toFixed(2)+'%';re.style.color=ret>=0?'var(--pos)':'var(--neg)';}
+  if(fe)fe.textContent=`-${totalFee.toLocaleString()} 元（買${buyFee}+賣${sellFee}+稅${tax}）`;
+  if(ne){ne.textContent=(netPnl>=0?'+':'')+netPnl.toLocaleString()+' 元 ('+((netRet>=0?'+':'')+netRet.toFixed(2))+'%)';ne.style.color=netPnl>=0?'var(--pos)':'var(--neg)';}
+}
+function confirmSell(ri){
+  const h=holdings[ri];const lots=hLots(h);const cost=hCost(h);
+  const date=document.getElementById('sm-date').value;
+  const sl=parseFloat(document.getElementById('sm-lots').value)||0;
+  const sp=parseFloat(document.getElementById('sm-price').value)||0;
+  if(!sl||!sp){showToast('請填張數和賣出價');return;}
+  const shares=sl*1000,buy=shares*cost,sell=shares*sp,pnl=sell-buy,ret=buy?pnl/buy*100:null;
+  const serial=Math.round((new Date(date)-new Date('1899-12-30'))/86400000);
+  // 判斷是否當沖：賣出日期等於最早買進日期
+  const earliest=hEarliestDate(h);
+  const tradeType=(earliest&&earliest===date)?'當沖':'現股';
+  allData.push({date:serial,code:h.code,type:tradeType,shares,buy,sell,pnl,ret,acct:h.acct});
+  allData.sort((a,b)=>a.date-b.date);
+  if(h.acct&&accounts[h.acct]){
+    accounts[h.acct].cash+=sell;
+    fundLog.unshift({date,acct:h.acct,type:'sell',amount:sell,delta:sell,note:h.code});
+  }
+  let rem=sl;
+  if(h.batches){
+    for(let i=0;i<h.batches.length&&rem>0;i++){
+      if(h.batches[i].lots<=rem){rem-=h.batches[i].lots;h.batches[i].lots=0;}
+      else{h.batches[i].lots-=rem;rem=0;}
+    }
+    h.batches=h.batches.filter(b=>b.lots>0);
+  }
+  if(!h.batches?.length||sl>=lots)holdings.splice(ri,1);
+  closeModal();saveData();renderHoldings();buildAssetOverview();buildToday();
+  showToast(`賣出 ${h.code}　損益 ${pnl>=0?'+':''}${pnl.toLocaleString()}`);
+}
+
+// ── 對帳 ──
+function openReconcileModal(){
+  const rows=Object.keys(accounts).map(a=>`
+    <div class="reconcile-row">
+      <div>
+        <div style="font-weight:500">${a}</div>
+        <div style="font-size:11px;color:var(--text3)">系統現金：${accounts[a].cash.toLocaleString()}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="rec-${a}" placeholder="實際餘額" style="width:120px;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);height:32px;outline:none">
+      </div>
+    </div>`).join('');
+  openModal(`
+    <h3>⚖ 帳戶對帳</h3>
+    <div class="sub">輸入券商顯示的實際現金餘額，系統自動比對差異</div>
+    ${rows}
+    <div id="rec-result" style="margin:14px 0;min-height:20px"></div>
+    <div class="modal-btns">
+      <button class="btn btn-sm" onclick="closeModal()">關閉</button>
+      <button class="btn btn-sm btn-p" onclick="doReconcile()">比對</button>
+    </div>`);
+}
+function doReconcile(){
+  const result=document.getElementById('rec-result');
+  let html='';
+  let hasInput=false;
+  Object.keys(accounts).forEach(a=>{
+    const input=document.getElementById(`rec-${a}`);
+    if(!input?.value)return;
+    hasInput=true;
+    const actual=parseFloat(input.value)||0;
+    const system=accounts[a].cash;
+    const diff=actual-system;
+    const color=diff===0?'var(--text3)':diff>0?'var(--pos)':'var(--neg)';
+    html+=`<div style="padding:8px 0;border-bottom:0.5px solid var(--border2);font-size:13px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <span style="font-weight:500">${a}</span>
+        <span style="margin:0 8px;color:var(--text3)">系統 ${system.toLocaleString()}</span>
+        <span style="margin:0 8px;color:var(--text3)">實際 ${actual.toLocaleString()}</span>
+        <span style="color:${color};font-weight:500">${diff===0?'✓ 相符':(diff>0?'+':'')+diff.toLocaleString()}</span>
+      </div>
+      ${diff!==0?`<button class="btn btn-sm" onclick="applyReconcile('${a}',${actual})" style="font-size:11px">以實際餘額更新</button>`:''}
+    </div>`;
+  });
+  result.innerHTML=hasInput?html:'<div style="color:var(--text3);font-size:12px">請輸入實際餘額後比對</div>';
+}
+function applyReconcile(acct,actual){
+  const diff=actual-accounts[acct].cash;
+  accounts[acct].cash=actual;
+  const today=new Date().toISOString().split('T')[0];
+  fundLog.unshift({date:today,acct,type:diff>=0?'in':'out',amount:Math.abs(diff),delta:diff,note:'對帳調整'});
+  saveData();buildAssetOverview();renderFundLog();doReconcile();
+  showToast(`${acct} 現金已更新為 ${actual.toLocaleString()}`);
+}
+
+// ── 資金異動 ──
+function toggleFundForm(){const f=document.getElementById('fund-form');f.style.display=f.style.display==='none'?'block':'none';}
+function addFund(){
+  const acct=document.getElementById('fd-acct').value;
+  const type=document.getElementById('fd-type').value;
+  const amount=parseFloat(document.getElementById('fd-amount').value)||0;
+  const note=document.getElementById('fd-note').value.trim();
+  if(!amount){showToast('請填金額');return;}
+  const delta=type==='in'?amount:-amount;
+  accounts[acct].cash+=delta;
+  const today=new Date().toISOString().split('T')[0];
+  fundLog.unshift({date:today,acct,type,amount,delta,note});
+  document.getElementById('fd-amount').value='';
+  document.getElementById('fd-note').value='';
+  saveData();renderFundLog();buildAssetOverview();
+  showToast(`${acct} ${type==='in'?'入金':'出金'} ${amount.toLocaleString()}`);
+}
+function renderFundLog(){
+  const body=document.getElementById('fund-log');if(!body)return;
+  if(!fundLog.length){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--text4)">尚無記錄</td></tr>';return;}
+  body.innerHTML=fundLog.map((f,i)=>`<tr>
+    <td>${f.date}</td>
+    <td><span class="badge b${f.acct}">${f.acct}</span></td>
+    <td style="color:${f.delta>=0?'var(--pos)':'var(--neg)'};font-size:12px">${
+      f.type==='in'?'入金':f.type==='out'?'出金':f.type==='buy'?'買進':f.type==='sell'?'賣出':f.type==='div'?'股利':'當沖'
+    }</td>
+    <td style="text-align:right;font-weight:500;color:${f.delta>=0?'var(--pos)':'var(--neg)'}">${f.delta>=0?'+':''}${f.delta.toLocaleString()}</td>
+    <td style="color:var(--text3)">${f.note||''}</td>
+    <td>${f.type==='in'||f.type==='out'?`<button class="btn btn-sm btn-danger" onclick="delFund(${i})" style="padding:2px 8px;height:24px">刪</button>`:''}</td>
+  </tr>`).join('');
+}
+function delFund(i){accounts[fundLog[i].acct].cash-=fundLog[i].delta;fundLog.splice(i,1);saveData();renderFundLog();buildAssetOverview();}
+
+// ── 歷年 ──
+function buildHistory(){
+  const years=[...new Set(allData.map(r=>getYear(r)).filter(Boolean))].sort().reverse();
+  let tS=0,tD=0,tDv=0,tA=0,tN=0,tW=0,tBuy=0;
+  const rows=[];
+  years.forEach(y=>{
+    const src=allData.filter(r=>getYear(r)===y);
+    const s=src.filter(r=>r.type==='現股').reduce((a,r)=>a+r.pnl,0);
+    const d=src.filter(r=>r.type==='當沖').reduce((a,r)=>a+r.pnl,0);
+    const dv=src.filter(r=>r.type==='股利').reduce((a,r)=>a+r.pnl,0);
+    const tot=s+d+dv,tr=src.filter(r=>r.type!=='股利'&&r.type!=='買進'),w=tr.filter(r=>r.pnl>0).length;
+    const totalBuy=src.filter(r=>r.type!=='股利'&&r.type!=='買進').reduce((a,r)=>a+(r.buy||0),0);
+    const capRet=totalBuy?tot/totalBuy*100:null;
+    tS+=s;tD+=d;tDv+=dv;tA+=tot;tN+=tr.length;tW+=w;tBuy+=totalBuy;
+    const isExp=expandedYears.has(y);
+    rows.push(`<tr class="expandable" onclick="toggleYear('${y}')">
+      <td style="font-weight:500"><span style="font-size:11px;color:var(--text3);margin-right:4px">${isExp?'▼':'▶'}</span>${y}</td>
+      <td style="text-align:right" class="${s>=0?'pos':'neg'}">${s>=0?'+':''}${s.toLocaleString()}</td>
+      <td style="text-align:right" class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${d.toLocaleString()}</td>
+      <td style="text-align:right;color:var(--pos)">+${dv.toLocaleString()}</td>
+      <td style="text-align:right;font-weight:500" class="${tot>=0?'pos':'neg'}">${tot>=0?'+':''}${tot.toLocaleString()}</td>
+      <td style="text-align:right;color:var(--text3)">${tr.length}</td>
+      <td style="text-align:right" class="${capRet!==null?(capRet>=0?'pos':'neg'):''}">${capRet!==null?(capRet>=0?'+':'')+capRet.toFixed(2)+'%':'—'}</td>
+    </tr>`);
+    if(isExp){
+      const months=['01','02','03','04','05','06','07','08','09','10','11','12'];
+      months.forEach(m=>{
+        const ms=src.filter(r=>getMonth(r)===m);
+        const ms_=ms.filter(r=>r.type==='現股').reduce((a,r)=>a+r.pnl,0);
+        const md=ms.filter(r=>r.type==='當沖').reduce((a,r)=>a+r.pnl,0);
+        const mdv=ms.filter(r=>r.type==='股利').reduce((a,r)=>a+r.pnl,0);
+        const mt=ms_+md+mdv;
+        const mtr=ms.filter(r=>r.type!=='股利'&&r.type!=='買進');
+        if(!mtr.length&&!mdv)return;
+        rows.push(`<tr class="month-expand-row">
+          <td style="padding-left:24px;font-size:12px;color:var(--text3)">${parseInt(m)}月</td>
+          <td style="text-align:right;font-size:12px" class="${ms_>=0?'pos':'neg'}">${ms_.toLocaleString()}</td>
+          <td style="text-align:right;font-size:12px" class="${md>=0?'pos':'neg'}">${md.toLocaleString()}</td>
+          <td style="text-align:right;font-size:12px" class="${mdv>=0?'pos':'neg'}">${mdv.toLocaleString()}</td>
+          <td style="text-align:right;font-size:12px;font-weight:500" class="${mt>=0?'pos':'neg'}">${mt.toLocaleString()}</td>
+          <td style="text-align:right;font-size:12px;color:var(--text3)">${mtr.length||0}</td>
+        </tr>`);
+      });
+    }
+  });
+  document.getElementById('history-body').innerHTML=rows.join('');
+  const totalCapRet=tBuy?tA/tBuy*100:null;
+  document.getElementById('history-foot').innerHTML=`<tr>
+    <td>合計</td>
+    <td style="text-align:right" class="${tS>=0?'pos':'neg'}">${tS>=0?'+':''}${tS.toLocaleString()}</td>
+    <td style="text-align:right" class="${tD>=0?'pos':'neg'}">${tD>=0?'+':''}${tD.toLocaleString()}</td>
+    <td style="text-align:right;color:var(--pos)">+${tDv.toLocaleString()}</td>
+    <td style="text-align:right" class="${tA>=0?'pos':'neg'}">${tA>=0?'+':''}${tA.toLocaleString()}</td>
+    <td style="text-align:right;color:var(--text3)">${tN}</td>
+    <td style="text-align:right" class="${totalCapRet!==null?(totalCapRet>=0?'pos':'neg'):''}">${totalCapRet!==null?(totalCapRet>=0?'+':'')+totalCapRet.toFixed(2)+'%':'—'}</td>
+  </tr>`;
+  document.getElementById('history-cards').innerHTML=`
+    <div class="card big hl"><div class="lbl">累計總收益</div><div class="val ${tA>=0?'pos':'neg'}">${tA>=0?'+':''}${tA.toLocaleString()}</div></div>
+    <div class="card"><div class="lbl">現股合計</div><div class="val ${tS>=0?'pos':'neg'}">${tS>=0?'+':''}${tS.toLocaleString()}</div></div>
+    <div class="card"><div class="lbl">當沖合計</div><div class="val ${tD>=0?'pos':'neg'}">${tD>=0?'+':''}${tD.toLocaleString()}</div></div>
+    <div class="card"><div class="lbl">股利合計</div><div class="val pos">+${tDv.toLocaleString()}</div></div>`;
+}
+function toggleYear(y){
+  if(expandedYears.has(y))expandedYears.delete(y);else expandedYears.add(y);
+  buildHistory();
+}
+
+let _monthChart=null;
+let _growthChart=null;
+
+function buildMonthChart(){
+  const canvas=document.getElementById('monthChart');if(!canvas)return;
+  const src=allData.filter(r=>getYear(r)===thisYear()&&r.type!=='買進');
+  const months=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const labels=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const vals=months.map(m=>src.reduce((s,r)=>getMonth(r)===m?s+r.pnl:s,0));
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const gridC=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
+  const textC=isDark?'#666':'#aaa';
+  if(_monthChart){_monthChart.destroy();_monthChart=null;}
+  _monthChart=new Chart(canvas,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{
+        data:vals,
+        backgroundColor:vals.map(v=>v>=0?'rgba(192,57,43,0.85)':'rgba(39,174,96,0.85)'),
+        borderRadius:4,
+        borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:{duration:600,easing:'easeOutQuart'},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:ctx=>{
+              const v=ctx.parsed.y;
+              return ` ${v>=0?'+':''}${v.toLocaleString()} 元`;
+            }
+          },
+          backgroundColor:isDark?'#2a2a2a':'#fff',
+          titleColor:isDark?'#e8e6e0':'#333',
+          bodyColor:isDark?'#aaa':'#555',
+          borderColor:isDark?'#3a3a3a':'#e0ddd5',
+          borderWidth:1,
+          padding:10,
+          cornerRadius:8,
+        },
+        datalabels:{display:false},
+      },
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{color:textC,font:{size:11}},
+          border:{display:false},
+        },
+        y:{
+          grid:{color:gridC},
+          ticks:{
+            color:textC,font:{size:10},
+            callback:v=>Math.abs(v)>=10000?(v/10000).toFixed(0)+'萬':Math.abs(v)>=1000?(v/1000).toFixed(0)+'k':v
+          },
+          border:{display:false},
+        }
+      },
+      onClick:(e,els)=>{
+        if(!els.length)return;
+        const m=months[els[0].index];
+        const yr=thisYear();
+        dYear=yr;dSortDesc=true;
+        document.getElementById('fil-type').value='';
+        document.getElementById('fil-code').value='';
+        switchPage('detail');
+        // 篩選該月份
+        const base=allData.filter(r=>getYear(r)===yr&&getMonth(r)===m&&r.type!=='買進');
+        dFiltered=[...base].sort((a,b)=>b.date-a.date);
+        dPage=0;renderDT();
+        showToast(`已跳至 ${yr}年${parseInt(m)}月 明細`);
+      }
+    }
+  });
+}
+
+function buildGrowthChart(){
+  const canvas=document.getElementById('growthChart');if(!canvas)return;
+  const years=[...new Set(allData.map(r=>getYear(r)).filter(Boolean))].sort();
+  if(!years.length)return;
+  let cum=0;
+  const pts=years.map(y=>{
+    cum+=allData.filter(r=>getYear(r)===y&&r.type!=='買進').reduce((s,r)=>s+r.pnl,0);
+    return{year:y,val:cum};
+  });
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const gridC=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
+  const textC=isDark?'#666':'#aaa';
+  const posC='rgba(192,57,43,1)';
+  const posGrad=isDark?'rgba(192,57,43,0.25)':'rgba(192,57,43,0.12)';
+  if(_growthChart){_growthChart.destroy();_growthChart=null;}
+  _growthChart=new Chart(canvas,{
+    type:'line',
+    data:{
+      labels:pts.map(p=>p.year),
+      datasets:[{
+        data:pts.map(p=>p.val),
+        borderColor:posC,
+        borderWidth:2.5,
+        pointBackgroundColor:pts.map(p=>p.val>=0?posC:'rgba(39,174,96,1)'),
+        pointRadius:5,
+        pointHoverRadius:7,
+        tension:0.35,
+        fill:true,
+        backgroundColor:(ctx)=>{
+          const chart=ctx.chart;
+          const {ctx:c,chartArea}=chart;
+          if(!chartArea)return posGrad;
+          const grad=c.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+          grad.addColorStop(0,isDark?'rgba(192,57,43,0.3)':'rgba(192,57,43,0.15)');
+          grad.addColorStop(1,'rgba(192,57,43,0)');
+          return grad;
+        },
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:{duration:800,easing:'easeOutQuart'},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:ctx=>{
+              const v=ctx.parsed.y;
+              return ` 累計 ${v>=0?'+':''}${v.toLocaleString()} 元`;
+            }
+          },
+          backgroundColor:isDark?'#2a2a2a':'#fff',
+          titleColor:isDark?'#e8e6e0':'#333',
+          bodyColor:isDark?'#aaa':'#555',
+          borderColor:isDark?'#3a3a3a':'#e0ddd5',
+          borderWidth:1,
+          padding:10,
+          cornerRadius:8,
+        }
+      },
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{color:textC,font:{size:11}},
+          border:{display:false},
+        },
+        y:{
+          grid:{color:gridC},
+          ticks:{
+            color:textC,font:{size:10},
+            callback:v=>Math.abs(v)>=10000?(v/10000).toFixed(0)+'萬':Math.abs(v)>=1000?(v/1000).toFixed(0)+'k':v
+          },
+          border:{display:false},
+        }
+      }
+    }
+  });
+}
+
+// ── 明細 ──
+function buildRecentTrades(){
+  const recent=[...allData].filter(r=>r.type!=='股利'&&r.type!=='買進').sort((a,b)=>b.date-a.date).slice(0,10);
+  const body=document.getElementById('today-recent');if(!body)return;
+  body.innerHTML=recent.length?recent.map(r=>`<tr>
+    <td>${excelDate(r.date)}</td>
+    <td>${r.code}${r.acct?` <span class="badge b${r.acct}">${r.acct}</span>`:''}</td>
+    <td><span class="badge b${r.type}">${r.type}</span></td>
+    <td>${r.acct?`<span class="badge b${r.acct}">${r.acct}</span>`:''}</td>
+    <td style="text-align:right" class="${r.pnl>=0?'pos':'neg'}">${r.pnl>=0?'+':''}${r.pnl.toLocaleString()}</td>
+    <td style="text-align:right" class="${r.pnl>=0?'pos':'neg'}">${r.ret===null?'配股':fmtPct(r.ret)}</td>
+  </tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="icon">📊</div><p>尚無交易記錄</p></div></td></tr>`;
+}
+function buildYBar(){
+  const years=[...new Set(allData.map(r=>getYear(r)).filter(Boolean))].sort().reverse();
+  document.getElementById('detail-ybar').innerHTML=
+    ['全部',...years].map(y=>`<div class="ypill${y===dYear?' active':''}" onclick="setDYear('${y}')">${y==='全部'?'全部':y+'年'}</div>`).join('');
+}
+function setDYear(y){dYear=y;buildYBar();applyDF();}
+let dSortDesc=true; // true=最新在前, false=最舊在前
+function toggleSortOrder(){
+  dSortDesc=!dSortDesc;
+  const btn=document.getElementById('btn-sort-order');
+  if(btn)btn.textContent=dSortDesc?'日期 ↓ 最新':'日期 ↑ 最舊';
+  applyDF();
+}
+function applyDF(){
+  const tp=document.getElementById('fil-type').value;
+  const cd=document.getElementById('fil-code').value.trim().toLowerCase();
+  const base=dYear==='全部'?allData:allData.filter(r=>getYear(r)===dYear);
+  dFiltered=base.filter(r=>(!tp||r.type===tp)&&(!cd||r.code.toLowerCase().includes(cd)));
+  dFiltered.sort((a,b)=>{
+    const aSummary=a.code.startsWith('現金股利');
+    const bSummary=b.code.startsWith('現金股利');
+    if(aSummary!==bSummary)return aSummary?1:-1; // 彙總列永遠排最後
+    return dSortDesc?b.date-a.date:a.date-b.date;
+  });
+  dPage=0;renderDT();
+}
+function renderDT(){
+  const slice=dFiltered.slice(dPage*PER,(dPage+1)*PER);
+  const body=document.getElementById('detail-body');
+  if(!dFiltered.length){body.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="icon">🔍</div><p>無符合條件的資料</p></div></td></tr>`;updPager();return;}
+  body.innerHTML=slice.map(r=>{
+    const pc=r.pnl>=0?'pos':'neg';
+    const rs=r.ret===null?'配股':r.type==='股利'||r.type==='買進'?'—':fmtPct(r.ret);
+    const rc=r.ret===null||r.type==='股利'||r.type==='買進'?'':r.ret>=0?'pos':'neg';
+    const isEditable=true;
+    return `<tr class="clickable" onclick="openEditRecord(${allData.indexOf(r)})">
+      <td>${r.type==='股利'?'':excelDate(r.date)}</td>
+      <td title="${r.code}">${r.code}</td>
+      <td><span class="badge b${r.type}">${r.type}</span></td>
+      <td>${r.acct?`<span class="badge b${r.acct}">${r.acct}</span>`:''}</td>
+      <td style="text-align:right">${r.shares||'—'}</td>
+      <td style="text-align:right">${r.buy?r.buy.toLocaleString():'—'}</td>
+      <td style="text-align:right">${r.sell?r.sell.toLocaleString():'—'}</td>
+      <td style="text-align:right" class="${r.type==='買進'?'':pc}">${r.type==='買進'?'—':(r.pnl>=0?'+':'')+r.pnl.toLocaleString()}</td>
+      <td style="text-align:right" class="${rc}">${rs}</td>
+    </tr>`;
+  }).join('');
+  updPager();
+}
+function updPager(){
+  const tp=Math.ceil(dFiltered.length/PER)||1;
+  document.getElementById('pager-info').textContent=`${dPage+1}/${tp}頁（${dFiltered.length}筆）`;
+  document.getElementById('btn-prev').disabled=dPage===0;
+  document.getElementById('btn-next').disabled=dPage>=tp-1;
+}
+function prevPage(){if(dPage>0){dPage--;renderDT();}}
+function nextPage(){const tp=Math.ceil(dFiltered.length/PER);if(dPage<tp-1){dPage++;renderDT();}}
+
+// ── 明細編輯 ──
+function openEditRecord(ri){
+  const r=allData[ri];if(!r)return;
+  openModal(`
+    <h3>修改記錄</h3><div class="sub"></div>
+    <div class="modal-fields">
+      <div class="field"><label>日期</label><input type="date" id="er-date" value="${excelDate(r.date)}"></div>
+      <div class="field"><label>股票代碼</label><input type="text" id="er-code" value="${r.code}"></div>
+      <div class="field"><label>類型</label><select id="er-type">
+        <option ${r.type==='現股'?'selected':''}>現股</option>
+        <option ${r.type==='當沖'?'selected':''}>當沖</option>
+        <option ${r.type==='股利'?'selected':''}>股利</option>
+        <option ${r.type==='買進'?'selected':''}>買進</option>
+      </select></div>
+      <div class="field"><label>帳戶</label><select id="er-acct">
+        <option value="" ${!r.acct?'selected':''}>—</option>
+        ${getBrokerOptions(r.acct)}
+      </select></div>
+      <div class="field"><label>股數</label><input type="number" id="er-shares" value="${r.shares||0}"></div>
+      <div class="field"><label>買進總額（元）</label><input type="number" id="er-buy" value="${r.buy||0}" oninput="erAutoCalc()"></div>
+      <div class="field"><label>賣出總額（元）</label><input type="number" id="er-sell" value="${r.sell||0}" oninput="erAutoCalc()"></div>
+      <div class="field"><label>損益（元）</label><input type="number" id="er-pnl" value="${r.pnl}" oninput="erCalcRet()"></div>
+      <div class="field"><label>報酬率（%）</label><input type="number" id="er-ret" value="${r.ret!==null&&r.ret!==undefined?Number(r.ret).toFixed(2):''}" placeholder="自動計算或手動填入" step="0.01"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-sm btn-danger" onclick="deleteRecord(${ri})">刪除</button>
+      <button class="btn btn-sm" onclick="closeModal()">取消</button>
+      <button class="btn btn-sm btn-p" onclick="saveEditRecord(${ri})">儲存</button>
+    </div>`);
+}
+function erAutoCalc(){
+  const buy=parseFloat(document.getElementById('er-buy')?.value)||0;
+  const sell=parseFloat(document.getElementById('er-sell')?.value)||0;
+  const pnlEl=document.getElementById('er-pnl');
+  const retEl=document.getElementById('er-ret');
+  if(buy&&sell){
+    const pnl=sell-buy;
+    const ret=pnl/buy*100;
+    if(pnlEl)pnlEl.value=pnl;
+    if(retEl)retEl.value=ret.toFixed(2);
+  }
+}
+function erCalcRet(){
+  const pnl=parseFloat(document.getElementById('er-pnl')?.value)||0;
+  const buy=parseFloat(document.getElementById('er-buy')?.value)||0;
+  const retEl=document.getElementById('er-ret');
+  if(buy&&retEl)retEl.value=(pnl/buy*100).toFixed(2);
+}
+function saveEditRecord(ri){
+  const date=document.getElementById('er-date').value;
+  const code=document.getElementById('er-code').value.trim();
+  const type=document.getElementById('er-type').value;
+  const acct=document.getElementById('er-acct').value;
+  const shares=parseFloat(document.getElementById('er-shares').value)||0;
+  const buy=parseFloat(document.getElementById('er-buy').value)||0;
+  const sell=parseFloat(document.getElementById('er-sell').value)||0;
+  const pnl=parseFloat(document.getElementById('er-pnl').value)||0;
+  const retVal=document.getElementById('er-ret').value;
+  const ret=retVal!==''?parseFloat(retVal):null;
+  if(!date||!code){showToast('請填日期和代碼');return;}
+  const serial=Math.round((new Date(date)-new Date('1899-12-30'))/86400000);
+  allData[ri]={...allData[ri],date:serial,code,type,acct,shares,buy,sell,pnl,ret};
+  allData.sort((a,b)=>a.date-b.date);
+  closeModal();saveData();applyDF();buildToday();showToast('已更新');
+}
+function deleteRecord(ri){
+  if(!confirm('確定刪除？'))return;
+  allData.splice(ri,1);closeModal();saveData();applyDF();buildToday();showToast('已刪除');
+}
+
+// ── 補登 ──
+function toggleAddForm(){const f=document.getElementById('extra-add-form');f.style.display=f.style.display==='none'?'block':'none';}
+function nfTypeChange(){
+  const type=document.getElementById('nf-type').value;
+  document.getElementById('nf-dt-fields').style.display=type==='當沖'?'flex':'none';
+  document.getElementById('nf-div-fields').style.display=type==='股利'?'flex':'none';
+  ['nf-chip-ret','nf-chip-bt','nf-chip-st'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=type==='股利'?'none':'';});
+  nfRecalc();
+}
+function nfRecalc(){
+  const type=document.getElementById('nf-type').value;
+  const pe=document.getElementById('nf-pnl'),re=document.getElementById('nf-ret');
+  if(type==='股利'){
+    const amt=parseFloat(document.getElementById('nf-div-amount')?.value)||0;
+    pe.textContent=amt?('+'+amt.toLocaleString()+' 元'):'—';pe.style.color=amt?'var(--pos)':'';return;
+  }
+  const lots=parseFloat(document.getElementById('nf-lots').value)||0;
+  const sh=lots*1000,bp=parseFloat(document.getElementById('nf-buy-price').value)||0;
+  const sp=parseFloat(document.getElementById('nf-sell-price').value)||0;
+  const bt=sh*bp,st=sh*sp;
+  document.getElementById('nf-bt').textContent=bt?bt.toLocaleString()+' 元':'—';
+  document.getElementById('nf-st').textContent=st?st.toLocaleString()+' 元':'—';
+  if(bt&&st){
+    const pnl=st-bt,ret=pnl/bt*100;
+    pe.textContent=(pnl>=0?'+':'')+pnl.toLocaleString()+' 元';pe.style.color=pnl>=0?'var(--pos)':'var(--neg)';
+    re.textContent=(ret>=0?'+':'')+ret.toFixed(2)+'%';re.style.color=ret>=0?'var(--pos)':'var(--neg)';
+  }else{pe.textContent='—';pe.style.color='';re.textContent='—';re.style.color='';}
+}
+function clearNF(){
+  ['nf-code','nf-lots','nf-buy-price','nf-sell-price','nf-div-amount'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['nf-pnl','nf-ret','nf-bt','nf-st'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='—';el.style.color='';}});
+}
+function addNew(){
+  const date=document.getElementById('nf-date').value;
+  const code=document.getElementById('nf-code').value.trim();
+  const acct=document.getElementById('nf-acct').value;
+  const type=document.getElementById('nf-type').value;
+  const lots=parseFloat(document.getElementById('nf-lots').value)||0;
+  const sh=lots*1000,bp=parseFloat(document.getElementById('nf-buy-price').value)||0;
+  const sp=parseFloat(document.getElementById('nf-sell-price').value)||0;
+  if(!date||!code){showToast('請填日期和代碼');return;}
+  let buy,sell,pnl,ret;
+  if(type==='股利'){
+    const amt=parseFloat(document.getElementById('nf-div-amount').value)||0;
+    if(!amt){showToast('請填股利金額');return;}
+    buy=0;sell=0;pnl=amt;ret=null;
+  }else{buy=sh*bp;sell=sh*sp;pnl=sell-buy;ret=buy?pnl/buy*100:null;}
+  const serial=Math.round((new Date(date)-new Date('1899-12-30'))/86400000);
+  const rec={date:serial,code,type,shares:sh,buy,sell,pnl,ret,acct};
+  allData.push(rec);allData.sort((a,b)=>a.date-b.date);
+  if(acct&&accounts[acct]){
+    if(type==='當沖'){accounts[acct].cash+=pnl;fundLog.unshift({date,acct,type:'daytrade_win',amount:Math.abs(pnl),delta:pnl,note:code+'(當沖)'});}
+    else if(type==='股利'){accounts[acct].cash+=pnl;fundLog.unshift({date,acct,type:'div',amount:pnl,delta:pnl,note:code});}
+    renderFundLog();
+  }
+  saveData();clearNF();toggleAddForm();showToast('已新增：'+code);
+  buildRecentTrades();applyDF();
+  if(document.getElementById('page-home').classList.contains('active')){buildAssetOverview();buildToday();}
+}
+
+// ── 個股績效 ──
+function buildStockYearBar(){
+  const sel=document.getElementById('stock-year');
+  if(!sel)return;
+  const years=[...new Set(allData.map(r=>getYear(r)).filter(Boolean))].sort().reverse();
+  const current=sel.value||thisYear();
+  sel.innerHTML=['全部',...years].map(y=>`<option value="${y}" ${y===current?'selected':''}>${y==='全部'?'全部':y+'年'}</option>`).join('');
+}
+
+function renderStockStats(){
+  buildStockYearBar();
+  const yr=document.getElementById('stock-year')?.value||'全部';
+  const search=(document.getElementById('stock-search')?.value||'').toLowerCase();
+  const sort=document.getElementById('stock-sort')?.value||'pnl';
+  const base=yr==='全部'?allData:allData.filter(r=>getYear(r)===yr);
+  const tradable=base.filter(r=>r.type!=='股利'&&r.type!=='買進');
+  const map={};
+  tradable.forEach(r=>{
+    const key=r.code;
+    if(!map[key])map[key]={code:key,pnl:0,count:0,wins:0,totalBuy:0,rets:[],records:[]};
+    map[key].pnl+=r.pnl;
+    map[key].count++;
+    if(r.pnl>0)map[key].wins++;
+    if(r.buy)map[key].totalBuy+=r.buy;
+    if(r.ret!==null&&r.ret!==undefined)map[key].rets.push(r.ret);
+    map[key].records.push(r);
+  });
+  let items=Object.values(map).filter(x=>!search||x.code.toLowerCase().includes(search));
+  items.sort((a,b)=>{
+    if(sort==='pnl')return b.pnl-a.pnl;
+    if(sort==='ret'){
+      const ar=a.rets.length?a.rets.reduce((s,v)=>s+v,0)/a.rets.length:0;
+      const br=b.rets.length?b.rets.reduce((s,v)=>s+v,0)/b.rets.length:0;
+      return br-ar;
+    }
+    return b.count-a.count;
+  });
+  const body=document.getElementById('stock-stats-body');
+  if(!items.length){body.innerHTML=`<div class="empty-state"><div class="icon">📊</div><p>${yr==='全部'?'':'該年度'}無資料</p></div>`;return;}
+  body.innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>股票代碼</th>
+      <th style="text-align:right">累計損益</th>
+      <th style="text-align:right">平均報酬率</th>
+      <th style="text-align:right">交易次數</th>
+      <th style="text-align:right">勝率</th>
+      <th style="text-align:right">單筆最高</th>
+      <th style="text-align:right">單筆最低</th>
+    </tr></thead>
+    <tbody>${items.map(x=>{
+      const avgRet=x.rets.length?x.rets.reduce((s,v)=>s+v,0)/x.rets.length:0;
+      const wr=Math.round(x.wins/x.count*100);
+      const pnls=x.records.map(r=>r.pnl);
+      const best=Math.max(...pnls);
+      const worst=Math.min(...pnls);
+      return `<tr>
+        <td style="font-weight:500">${x.code}</td>
+        <td style="text-align:right;font-weight:500" class="${x.pnl>=0?'pos':'neg'}">${x.pnl.toLocaleString()}</td>
+        <td style="text-align:right" class="${avgRet>=0?'pos':'neg'}">${fmtPct(avgRet)}</td>
+        <td style="text-align:right;color:var(--text3)">${x.count}</td>
+        <td style="text-align:right;color:var(--text3)">${wr}%</td>
+        <td style="text-align:right" class="${best>=0?'pos':'neg'}">${best.toLocaleString()}</td>
+        <td style="text-align:right" class="${worst>=0?'pos':'neg'}">${worst.toLocaleString()}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+// ── 備份/匯入 ──
+function openBackupModal(){
+  openModal(`
+    <h3>💾 備份 / 匯入</h3>
+    <div class="sub">備份可還原所有持股、帳戶、交易記錄</div>
+    <div class="modal-btns" style="justify-content:flex-start;margin-bottom:14px">
+      <button class="btn btn-p btn-sm" onclick="doExportBackup()">↓ 匯出備份 JSON</button>
+      <button class="btn btn-sm" onclick="document.getElementById('import-file').click()">↑ 匯入備份</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImportBackup(this)">
+    </div>
+    <div id="backup-status" style="font-size:12px;color:var(--text3)">匯入後會覆蓋目前所有資料，請確認備份無誤再匯入。</div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn btn-sm" onclick="closeModal()">關閉</button>
+    </div>`,'wide');
+}
+function doExportBackup(){
+  const newRecs=allData.filter(r=>!RAW.includes(r));
+  const data={holdings,accounts,brokers:accounts,fundLog,addedRecords:newRecs,exportTime:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='股票備份_'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();
+  showToast('備份已匯出');
+}
+function doImportBackup(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.holdings||!data.accounts){throw new Error('格式錯誤');}
+      holdings=data.holdings;
+      // 合併 accounts，保留現有的 discount 設定
+      const importedAccounts=data.accounts||data.brokers||{};
+      Object.keys(importedAccounts).forEach(k=>{
+        accounts[k]={
+          ...accounts[k],
+          ...importedAccounts[k],
+          discount:importedAccounts[k].discount||accounts[k]?.discount||10
+        };
+      });
+      fundLog=data.fundLog||[];
+      // 清除舊的 localStorage 再重寫
+      localStorage.removeItem('stock_holdings');
+      localStorage.removeItem('stock_accounts');
+      localStorage.removeItem('stock_fundlog');
+      localStorage.removeItem('stock_added');
+      if(data.addedRecords){
+        data.addedRecords.forEach(r=>{
+          if(!allData.find(d=>d.date===r.date&&d.code===r.code&&d.pnl===r.pnl))allData.push(r);
+        });
+        allData.sort((a,b)=>a.date-b.date);
+      }
+      injectBrokerStyles();saveData();
+      document.getElementById('backup-status').textContent=`✓ 匯入成功！匯出時間：${data.exportTime||'未知'}`;
+      document.getElementById('backup-status').style.color='var(--pos)';
+      buildHome();renderFundLog();
+      showToast('備份匯入成功！');
+    }catch(err){
+      document.getElementById('backup-status').textContent='✗ 匯入失敗：'+err.message;
+      document.getElementById('backup-status').style.color='var(--neg)';
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── 產生空白版本 ──
+function generateBlankVersion(){
+  // 取得目前頁面的完整 HTML
+  const orig=document.documentElement.outerHTML;
+  
+  // 用正規表達式清除所有個人資料
+  let blank=orig;
+  
+  // 清除 RAW 陣列
+  blank=blank.replace(/const RAW=\[[\s\S]*?\];/,'const RAW=[];');
+  
+  // 清除 holdings
+  blank=blank.replace(/let holdings=\[[\s\S]*?\];/,'let holdings=[];');
+  
+  // 清除 accounts，改成空物件
+  blank=blank.replace(/let accounts=\{[^;]*\};/,'let accounts={};');
+  
+  // 清除 fundLog
+  blank=blank.replace(/let fundLog=\[[\s\S]*?\];/,'let fundLog=[];');
+  
+  // 清除 allData（重置為空，等init時從RAW重建）
+  blank=blank.replace(/let allData=\[\.\.\.RAW\];/,'let allData=[];');
+  
+  // 下載
+  const blob=new Blob([blank],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='股票儀表板_空白版_'+new Date().toISOString().split('T')[0]+'.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('空白版本已產生！');
+}
+// ── 年度報酬目標 ──
+let targetSettings={base:750000,rate:15};
+
+function saveTargetSettings(){
+  const base=parseFloat(document.getElementById('target-base')?.value)||0;
+  const rate=parseFloat(document.getElementById('target-rate')?.value)||15;
+  targetSettings={base,rate};
+  localStorage.setItem('stock_target',JSON.stringify(targetSettings));
+  buildAnnualTarget();
+}
+function loadTargetSettings(){
+  try{const s=localStorage.getItem('stock_target');if(s)targetSettings=JSON.parse(s);}catch(e){}
+  const tb=document.getElementById('target-base');
+  const tr=document.getElementById('target-rate');
+  if(tb)tb.value=targetSettings.base||'';
+  if(tr)tr.value=targetSettings.rate||'';
+}
+function buildAnnualTarget(){
+  const el=document.getElementById('annual-target-body');if(!el)return;
+  const{base,rate}=targetSettings;
+  if(!base||!rate){el.closest('.section').style.display='none';return;}
+  el.closest('.section').style.display='block';
+  const yr=thisYear();
+  const src=allData.filter(r=>getYear(r)===yr&&r.type!=='買進');
+  const realized=src.reduce((s,r)=>s+r.pnl,0);
+  const unrealized=holdings.reduce((s,h)=>h.price?s+hLots(h)*h.price*1000-hTotalCost(h):s,0);
+  const total=realized+unrealized;
+  const targetAmt=base*rate/100;
+  const progress=targetAmt?total/targetAmt*100:0;
+  const progressCapped=Math.min(Math.max(progress,0),100);
+  const isAhead=progress>=100;
+  const now=new Date();
+  const dayOfYear=Math.floor((now-new Date(now.getFullYear(),0,0))/86400000);
+  const timeProgress=Math.min(dayOfYear/365*100,100);
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div class="sec-title" style="margin:0">${yr} 年度目標進度</div>
+      <div style="font-size:12px;color:var(--text3)">目標 ${rate}%　＝　${targetAmt.toLocaleString()} 元</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px">
+      <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">年初資產</div><div style="font-weight:500">${base.toLocaleString()}</div></div>
+      <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">已實現損益</div><div style="font-weight:500" class="${realized>=0?'pos':'neg'}">${realized>=0?'+':''}${realized.toLocaleString()}</div></div>
+      <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">未實現損益</div><div style="font-weight:500" class="${unrealized>=0?'pos':'neg'}">${unrealized>=0?'+':''}${unrealized.toLocaleString()}</div></div>
+      <div><div style="font-size:10px;color:var(--text4);margin-bottom:2px">合計損益</div><div style="font-weight:500;font-size:16px" class="${total>=0?'pos':'neg'}">${total>=0?'+':''}${total.toLocaleString()}</div></div>
+    </div>
+    <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px">
+      <span style="color:var(--text3)">目標達成率</span>
+      <span style="font-weight:500" class="${isAhead?'pos':''}">${progress.toFixed(1)}%${isAhead?' 🎉':''}</span>
+    </div>
+    <div style="background:var(--surface2);border-radius:20px;height:10px;overflow:hidden;position:relative;margin-bottom:6px">
+      <div style="height:100%;width:${progressCapped}%;background:var(--pos);border-radius:20px;transition:width .6s ease"></div>
+      <div style="position:absolute;top:0;left:${timeProgress.toFixed(1)}%;width:2px;height:100%;background:var(--text4);opacity:0.5" title="目前時間進度"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text4);display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px">
+      <span>時間進度 ${timeProgress.toFixed(0)}%（今年第 ${dayOfYear} 天）</span>
+      <span>${isAhead?'已達成目標 🎊':'距目標還差 '+Math.max(0,targetAmt-total).toLocaleString()+' 元'}</span>
+    </div>`;
+}
+
+// ── 月結算 ──
+function buildMonthlySummary(){
+  const sel=document.getElementById('monthly-year-sel');
+  if(sel){
+    const years=[...new Set(allData.map(r=>getYear(r)).filter(Boolean))].sort().reverse();
+    const cur=sel.value||thisYear();
+    sel.innerHTML=years.map(y=>`<option value="${y}" ${y===cur?'selected':''}>${y}年</option>`).join('');
+  }
+  const yr=sel?.value||thisYear();
+  const src=allData.filter(r=>getYear(r)===yr&&r.type!=='買進');
+  const months=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const RATE=0.001425,MIN_FEE=20;
+  let tBuy=0,tSell=0,tPnl=0,tFee=0,tRefund=0;
+  const rows=months.map(m=>{
+    const ms=src.filter(r=>getMonth(r)===m);
+    if(!ms.length)return null;
+    const buy=ms.reduce((s,r)=>s+(r.buy||0),0);
+    const sell=ms.reduce((s,r)=>s+(r.sell||0),0);
+    const pnl=ms.reduce((s,r)=>s+r.pnl,0);
+    let fee=0;
+    ms.forEach(r=>{
+      const disc=(accounts[r.acct]?.discount||10)/10;
+      const bf=r.buy?Math.max(Math.round(r.buy*RATE*disc),MIN_FEE):0;
+      const sf=r.sell?Math.max(Math.round(r.sell*RATE*disc),MIN_FEE):0;
+      fee+=bf+sf+Math.round((r.sell||0)*(r.type==='當沖'?0.0015:0.003));
+    });
+    const mStr=`${yr}-${m}`;
+    const refund=fundLog.filter(f=>f.date?.startsWith(mStr)&&f.type==='fee_refund').reduce((s,f)=>s+f.amount,0);
+    tBuy+=buy;tSell+=sell;tPnl+=pnl;tFee+=fee;tRefund+=refund;
+    const net=pnl-fee+refund;
+    return `<tr>
+      <td style="font-weight:500">${parseInt(m)}月</td>
+      <td style="text-align:right;color:var(--text2)">${buy?buy.toLocaleString():'—'}</td>
+      <td style="text-align:right;color:var(--text2)">${sell?sell.toLocaleString():'—'}</td>
+      <td style="text-align:right" class="${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${pnl.toLocaleString()}</td>
+      <td style="text-align:right;color:var(--neg)">-${fee.toLocaleString()}</td>
+      <td style="text-align:right">
+        <span class="pos">${refund?'+'+refund.toLocaleString():'—'}</span>
+        <button onclick="addFeeRefund('${yr}','${m}')" style="background:none;border:0.5px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;padding:1px 5px;color:var(--text3);margin-left:4px" title="輸入退款金額">＋</button>
+      </td>
+      <td style="text-align:right;font-weight:500" class="${net>=0?'pos':'neg'}">${net>=0?'+':''}${net.toLocaleString()}</td>
+      <td></td>
+    </tr>`;
+  }).filter(Boolean);
+  document.getElementById('monthly-body').innerHTML=rows.join('')||'<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text4)">無資料</td></tr>';
+  const tNet=tPnl-tFee+tRefund;
+  document.getElementById('monthly-foot').innerHTML=`<tr>
+    <td>合計</td>
+    <td style="text-align:right">${tBuy.toLocaleString()}</td>
+    <td style="text-align:right">${tSell.toLocaleString()}</td>
+    <td style="text-align:right" class="${tPnl>=0?'pos':'neg'}">${tPnl>=0?'+':''}${tPnl.toLocaleString()}</td>
+    <td style="text-align:right;color:var(--neg)">-${tFee.toLocaleString()}</td>
+    <td style="text-align:right;color:var(--pos)">${tRefund?'+'+tRefund.toLocaleString():'—'}</td>
+    <td style="text-align:right;font-weight:500" class="${tNet>=0?'pos':'neg'}">${tNet>=0?'+':''}${tNet.toLocaleString()}</td>
+    <td></td>
+  </tr>`;
+}
+function addFeeRefund(yr,m){
+  const amt=parseFloat(prompt(`輸入 ${yr}年${parseInt(m)}月 手續費退款金額（元）：`))||0;
+  if(!amt)return;
+  const acct=getBrokerNames()[0]||'中信';
+  const date=`${yr}-${m}-10`;
+  fundLog.unshift({date,acct,type:'fee_refund',amount:amt,delta:amt,note:`${parseInt(m)}月手續費退款`});
+  accounts[acct].cash+=amt;
+  saveData();buildMonthlySummary();buildAssetOverview();renderFundLog();
+  showToast(`已記錄手續費退款 +${amt.toLocaleString()} 元`);
+}
+
+async function fetchPrices(){
+  if(!holdings.length)return;
+  const codes=[...new Set(holdings.map(h=>h.code.match(/^\d+/)?h.code.match(/^\d+/)[0]:null).filter(Boolean))];
+  if(!codes.length)return;
+  showToast('正在更新現價...');
+  let updated=0;
+  await Promise.all(codes.map(async code=>{
+    const price=await fetchOnePrice(code,'tse')||await fetchOnePrice(code,'otc');
+    if(!price)return;
+    holdings.forEach(h=>{if(h.code.startsWith(code)){h.price=price;updated++;}});
+  }));
+  if(updated>0){
+    saveData();renderHoldings();buildAssetOverview();
+    const now=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+    showToast(`已更新 ${updated} 檔現價（${now}）`);
+    document.getElementById('price-update-time').textContent=`更新：${now}`;
+  }else showToast('無法取得現價（非交易時間）');
+}
+async function fetchOnePrice(code,market){
+  try{
+    const res=await fetch(`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${market}_${code}.tw&json=1&delay=0`);
+    const data=await res.json();
+    const item=data?.msgArray?.[0];
+    return parseFloat(item?.z)||parseFloat(item?.y)||null;
+  }catch(e){return null;}
+}
+function exportCSV(){
+  const rows=dFiltered.map(r=>[excelDate(r.date)||'',r.code,r.acct||'',r.type,r.shares,r.buy,r.sell,r.pnl,r.ret===null?'配股':r.ret].join(','));
+  const blob=new Blob(['\ufeff日期,股票代碼,帳戶,類型,股數,買進,賣出,損益,報酬率\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='股票明細.csv';a.click();
+}
+
+// ── Modal ──
+function openModal(html,cls=''){
+  const old=document.getElementById('_modal');if(old)old.remove();
+  const el=document.createElement('div');el.id='_modal';el.className='modal-overlay';
+  el.innerHTML=`<div class="modal${cls?' '+cls:''}">${html}</div>`;
+  el.addEventListener('click',e=>{if(e.target===el)closeModal();});
+  document.body.appendChild(el);
+}
+function closeModal(){const el=document.getElementById('_modal');if(el)el.remove();}
+
+// ── 儲存/讀取 ──
+function saveData(){
+  try{
+    localStorage.setItem('stock_holdings',JSON.stringify(holdings));
+    localStorage.setItem('stock_brokers',JSON.stringify(accounts));
+    localStorage.setItem('stock_accounts',JSON.stringify(accounts));
+    localStorage.setItem('stock_fundlog',JSON.stringify(fundLog));
+    const newRecs=allData.filter(r=>!RAW.includes(r));
+    localStorage.setItem('stock_added',JSON.stringify(newRecs));
+  }catch(e){}
+}
+function loadData(){
+  try{
+    const br=localStorage.getItem('stock_brokers');
+    const h=localStorage.getItem('stock_holdings');
+    const ac=localStorage.getItem('stock_accounts');
+    const fl=localStorage.getItem('stock_fundlog');
+    const ad=localStorage.getItem('stock_added');
+    if(br){const s=JSON.parse(br);if(Object.keys(s).length)accounts=s;}
+    if(h){const s=JSON.parse(h);if(s.length)holdings=s;}
+    if(ac)accounts=JSON.parse(ac);
+    if(fl)fundLog=JSON.parse(fl);
+    if(ad){
+      const saved=JSON.parse(ad);
+      saved.forEach(r=>{if(!allData.find(d=>d.date===r.date&&d.code===r.code&&d.pnl===r.pnl))allData.push(r);});
+      allData.sort((a,b)=>a.date-b.date);
+    }
+  }catch(e){}
+}
+
+// ── 初始化 ──
+document.getElementById('nf-date').value=new Date().toISOString().split('T')[0];
+loadData();loadTargetSettings();
+if(!getBrokerNames().length){
+  switchPage('settings');
+}else{
+  activeAcct=getBrokerNames()[0];
+  injectBrokerStyles();buildHome();renderFundLog();
+}
+window.addEventListener('resize',()=>{
+  if(document.getElementById('page-home').classList.contains('active'))buildSparklines();
+  if(document.getElementById('page-history').classList.contains('active')){buildMonthChart();buildGrowthChart();}
+});
+window.addEventListener('load',()=>setTimeout(fetchPrices,600));
+</script>
+
+
+</body></html>

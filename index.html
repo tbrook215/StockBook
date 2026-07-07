@@ -356,7 +356,7 @@ tfoot td{background:var(--surface2);font-weight:500;padding:9px 10px;border-top:
       <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px">
         <div class="field" style="width:150px">
           <label>年初總資產（元）</label>
-          <input type="number" id="target-base" placeholder="750000" oninput="saveTargetSettings()">
+          <input type="number" id="target-base" placeholder="例如：1000000" oninput="saveTargetSettings()">
         </div>
         <div class="field" style="width:120px">
           <label>目標年化報酬率（%）</label>
@@ -414,7 +414,6 @@ let allData=[...RAW];
 let holdings=[];
 let accounts={};
 let fundLog=[];
-
 let dYear=thisYear(),dFiltered=[],dPage=0;
 const PER=20;
 let activeAcct='';
@@ -436,6 +435,8 @@ function hEarliestDate(h){
   if(!h.batches?.length)return'';
   return h.batches.map(b=>b.date).filter(Boolean).sort()[0]||'';
 }
+
+
 
 // ── 動態券商 Badge 顏色 ──
 const BROKER_COLORS=[
@@ -1716,7 +1717,7 @@ function generateBlankVersion(){
   showToast('空白版本已產生！');
 }
 // ── 年度報酬目標 ──
-let targetSettings={base:750000,rate:15};
+let targetSettings={base:0,rate:15};
 
 function saveTargetSettings(){
   const base=parseFloat(document.getElementById('target-base')?.value)||0;

@@ -1634,7 +1634,7 @@ function openBackupModal(){
 }
 function doExportBackup(){
   const newRecs=allData.filter(r=>!RAW.includes(r));
-  const data={holdings,accounts,brokers:accounts,fundLog,addedRecords:newRecs,exportTime:new Date().toISOString()};
+  const data={holdings,accounts,brokers:accounts,fundLog,addedRecords:newRecs,rawRecords:RAW,exportTime:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1650,14 +1650,9 @@ function doImportBackup(input){
       const data=JSON.parse(e.target.result);
       if(!data.holdings||!data.accounts){throw new Error('格式錯誤');}
       holdings=data.holdings;
-      // 合併 accounts，保留現有的 discount 設定
       const importedAccounts=data.accounts||data.brokers||{};
       Object.keys(importedAccounts).forEach(k=>{
-        accounts[k]={
-          ...accounts[k],
-          ...importedAccounts[k],
-          discount:importedAccounts[k].discount||accounts[k]?.discount||10
-        };
+        accounts[k]={...accounts[k],...importedAccounts[k],discount:importedAccounts[k].discount||accounts[k]?.discount||10};
       });
       fundLog=data.fundLog||[];
       // 清除舊的 localStorage 再重寫
@@ -1665,6 +1660,12 @@ function doImportBackup(input){
       localStorage.removeItem('stock_accounts');
       localStorage.removeItem('stock_fundlog');
       localStorage.removeItem('stock_added');
+      localStorage.removeItem('stock_raw');
+      // 還原 RAW 資料
+      if(data.rawRecords&&data.rawRecords.length){
+        localStorage.setItem('stock_raw',JSON.stringify(data.rawRecords));
+      }
+      // 還原手動新增記錄
       if(data.addedRecords){
         data.addedRecords.forEach(r=>{
           if(!allData.find(d=>d.date===r.date&&d.code===r.code&&d.pnl===r.pnl))allData.push(r);
@@ -1903,15 +1904,27 @@ function saveData(){
     localStorage.setItem('stock_fundlog',JSON.stringify(fundLog));
     const newRecs=allData.filter(r=>!RAW.includes(r));
     localStorage.setItem('stock_added',JSON.stringify(newRecs));
+    // 如果 RAW 是空的（空白版），把從備份載入的歷史資料也存起來
+    if(!RAW.length&&allData.length){
+      localStorage.setItem('stock_raw',JSON.stringify(allData));
+    }
   }catch(e){}
 }
 function loadData(){
   try{
+    const raw=localStorage.getItem('stock_raw');
     const br=localStorage.getItem('stock_brokers');
     const h=localStorage.getItem('stock_holdings');
     const ac=localStorage.getItem('stock_accounts');
     const fl=localStorage.getItem('stock_fundlog');
     const ad=localStorage.getItem('stock_added');
+    // 還原備份的RAW歷史資料
+    if(raw){
+      const savedRaw=JSON.parse(raw);
+      savedRaw.forEach(r=>{
+        if(!allData.find(d=>d.date===r.date&&d.code===r.code&&d.pnl===r.pnl))allData.push(r);
+      });
+    }
     if(br){const s=JSON.parse(br);if(Object.keys(s).length)accounts=s;}
     if(h){const s=JSON.parse(h);if(s.length)holdings=s;}
     if(ac)accounts=JSON.parse(ac);
@@ -1919,8 +1932,8 @@ function loadData(){
     if(ad){
       const saved=JSON.parse(ad);
       saved.forEach(r=>{if(!allData.find(d=>d.date===r.date&&d.code===r.code&&d.pnl===r.pnl))allData.push(r);});
-      allData.sort((a,b)=>a.date-b.date);
     }
+    allData.sort((a,b)=>a.date-b.date);
   }catch(e){}
 }
 

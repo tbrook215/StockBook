@@ -267,7 +267,12 @@ tfoot td{background:var(--surface2);font-weight:500;padding:9px 10px;border-top:
       <div id="extra-add-form" style="display:none">
         <div class="add-row" style="margin-bottom:10px">
           <div class="field" style="width:115px"><label>日期</label><input type="date" id="nf-date"></div>
-          <div class="field" style="width:120px"><label>股票代碼</label><input type="text" id="nf-code" placeholder="2330台積電" oninput="nfRecalc()"></div>
+          <div class="field" style="width:120px"><label>股票代碼</label>
+            <input type="text" id="nf-code-num" placeholder="輸入代碼如 6147" style="width:100%" oninput="clearNfName()" onblur="lookupNfName()">
+          </div>
+          <div class="field" style="width:100px"><label>股票名稱</label>
+            <input type="text" id="nf-code-name" placeholder="自動帶出" style="width:100%;color:var(--text3)" readonly>
+          </div>
           <div class="field" style="width:68px"><label>帳戶</label><select id="nf-acct"><option value="">—</option></select></div>
           <div class="field" style="width:68px"><label>類型</label><select id="nf-type" onchange="nfTypeChange()"><option>當沖</option><option>股利</option></select></div>
           <div id="nf-dt-fields" style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1397,7 +1402,7 @@ function renderDT(){
     const rc=r.ret===null||r.type==='股利'||r.type==='買進'?'':r.ret>=0?'pos':'neg';
     const isEditable=true;
     return `<tr class="clickable" onclick="openEditRecord(${allData.indexOf(r)})">
-      <td>${r.type==='股利'?'':excelDate(r.date)}</td>
+      <td>${r.code.startsWith('現金股利')?'':excelDate(r.date)}</td>
       <td title="${r.code}">${r.code}</td>
       <td><span class="badge b${r.type}">${r.type}</span></td>
       <td>${r.acct?`<span class="badge b${r.acct}">${r.acct}</span>`:''}</td>
@@ -1491,6 +1496,22 @@ function deleteRecord(ri){
 
 // ── 補登 ──
 function toggleAddForm(){const f=document.getElementById('extra-add-form');f.style.display=f.style.display==='none'?'block':'none';}
+async function lookupNfName(){
+  const num=document.getElementById('nf-code-num')?.value.trim();
+  if(!num||num.length<4)return;
+  const nameEl=document.getElementById('nf-code-name');
+  if(nameEl)nameEl.value='查詢中...';
+  const name=await fetchStockName(num);
+  if(nameEl){
+    if(name){nameEl.value=name;nameEl.style.color='var(--text2)';}
+    else{nameEl.value='';nameEl.removeAttribute('readonly');nameEl.placeholder='手動輸入名稱';nameEl.style.color='var(--text)';}
+  }
+  nfRecalc();
+}
+function clearNfName(){
+  const nameEl=document.getElementById('nf-code-name');
+  if(nameEl){nameEl.value='';nameEl.setAttribute('readonly','');nameEl.placeholder='自動帶出';nameEl.style.color='var(--text3)';}
+}
 function nfTypeChange(){
   const type=document.getElementById('nf-type').value;
   document.getElementById('nf-dt-fields').style.display=type==='當沖'?'flex':'none';
@@ -1518,18 +1539,23 @@ function nfRecalc(){
   }else{pe.textContent='—';pe.style.color='';re.textContent='—';re.style.color='';}
 }
 function clearNF(){
-  ['nf-code','nf-lots','nf-buy-price','nf-sell-price','nf-div-amount'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['nf-code-num','nf-code-name','nf-lots','nf-buy-price','nf-sell-price','nf-div-amount'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.value='';if(id==='nf-code-name'){el.setAttribute('readonly','');el.placeholder='自動帶出';el.style.color='var(--text3)';}}
+  });
   ['nf-pnl','nf-ret','nf-bt','nf-st'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='—';el.style.color='';}});
 }
 function addNew(){
   const date=document.getElementById('nf-date').value;
-  const code=document.getElementById('nf-code').value.trim();
+  const codeNum=document.getElementById('nf-code-num').value.trim();
+  const codeName=document.getElementById('nf-code-name').value.trim();
+  const code=codeNum+(codeName?' '+codeName:'');
   const acct=document.getElementById('nf-acct').value;
   const type=document.getElementById('nf-type').value;
   const lots=parseFloat(document.getElementById('nf-lots').value)||0;
   const sh=lots*1000,bp=parseFloat(document.getElementById('nf-buy-price').value)||0;
   const sp=parseFloat(document.getElementById('nf-sell-price').value)||0;
-  if(!date||!code){showToast('請填日期和代碼');return;}
+  if(!date||!codeNum){showToast('請填日期和代碼');return;}
   let buy,sell,pnl,ret;
   if(type==='股利'){
     const amt=parseFloat(document.getElementById('nf-div-amount').value)||0;

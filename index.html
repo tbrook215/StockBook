@@ -1124,14 +1124,22 @@ function renderFundLog(){
     <td>${f.date}</td>
     <td><span class="badge b${f.acct}">${f.acct}</span></td>
     <td style="color:${f.delta>=0?'var(--pos)':'var(--neg)'};font-size:12px">${
-      f.type==='in'?'入金':f.type==='out'?'出金':f.type==='buy'?'買進':f.type==='sell'?'賣出':f.type==='div'?'股利':'當沖'
+      f.type==='in'?'入金':f.type==='out'?'出金':f.type==='buy'?'買進':f.type==='sell'?'賣出':f.type==='div'?'股利':f.type==='fee_refund'?'當沖':'其他'
     }</td>
     <td style="text-align:right;font-weight:500;color:${f.delta>=0?'var(--pos)':'var(--neg)'}">${f.delta>=0?'+':''}${f.delta.toLocaleString()}</td>
     <td style="color:var(--text3)">${f.note||''}</td>
-    <td>${f.type==='in'||f.type==='out'?`<button class="btn btn-sm btn-danger" onclick="delFund(${i})" style="padding:2px 8px;height:24px">刪</button>`:''}</td>
+    <td><button class="btn btn-sm btn-danger" onclick="delFund(${i})" style="padding:2px 8px;height:24px">刪</button></td>
   </tr>`).join('');
 }
-function delFund(i){accounts[fundLog[i].acct].cash-=fundLog[i].delta;fundLog.splice(i,1);saveData();renderFundLog();buildAssetOverview();}
+function delFund(i){
+  const f=fundLog[i];
+  if(!confirm(`確定刪除這筆記錄？\n${f.date} ${f.note||''} ${f.delta>=0?'+':''}${f.delta.toLocaleString()}`))return;
+  // 把現金反向還原
+  if(accounts[f.acct])accounts[f.acct].cash-=f.delta;
+  fundLog.splice(i,1);
+  saveData();renderFundLog();buildAssetOverview();
+  showToast('已刪除記錄');
+}
 
 // ── 歷年 ──
 function buildHistory(){

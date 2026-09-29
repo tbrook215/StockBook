@@ -1390,7 +1390,7 @@ function applyDF(){
   const tp=document.getElementById('fil-type').value;
   const cd=document.getElementById('fil-code').value.trim().toLowerCase();
   const base=dYear==='全部'?allData:allData.filter(r=>getYear(r)===dYear);
-  dFiltered=base.filter(r=>(!tp||r.type===tp)&&(!cd||r.code.toLowerCase().includes(cd)));
+  dFiltered=base.filter(r=>(!tp||r.type===tp)&&(!cd||r.code.toLowerCase().includes(cd))&&r.type!=='買進');
   dFiltered.sort((a,b)=>{
     const aSummary=a.code.startsWith('現金股利');
     const bSummary=b.code.startsWith('現金股利');
@@ -1405,7 +1405,7 @@ function renderDT(){
   if(!dFiltered.length){body.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="icon">🔍</div><p>無符合條件的資料</p></div></td></tr>`;updPager();return;}
   body.innerHTML=slice.map(r=>{
     const pc=r.pnl>=0?'pos':'neg';
-    const rs=r.ret===null?'配股':r.type==='股利'||r.type==='買進'?'—':fmtPct(r.ret);
+    const rs=r.ret===null?(r.type==='股利'||r.type==='買進'?'—':'配股'):r.type==='股利'||r.type==='買進'?'—':fmtPct(r.ret);
     const rc=r.ret===null||r.type==='股利'||r.type==='買進'?'':r.ret>=0?'pos':'neg';
     const isEditable=true;
     return `<tr class="clickable" onclick="openEditRecord(${allData.indexOf(r)})">

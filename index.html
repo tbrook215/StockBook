@@ -275,7 +275,7 @@ tfoot td{background:var(--surface2);font-weight:500;padding:9px 10px;border-top:
         <div class="add-row" style="margin-bottom:10px">
           <div class="field" style="width:115px"><label>日期</label><input type="date" id="nf-date"></div>
           <div class="field" style="width:120px"><label>股票代碼</label>
-            <input type="text" id="nf-code-num" placeholder="輸入代碼如 6147" style="width:100%" oninput="clearNfName()" onblur="lookupNfName()">
+            <input type="text" id="nf-code-num" placeholder="輸入代碼如 6147" style="width:100%" oninput="clearNfName();if(this.value.trim().length>=4)lookupNfName()" onblur="lookupNfName()">
           </div>
           <div class="field" style="width:100px"><label>股票名稱</label>
             <input type="text" id="nf-code-name" placeholder="自動帶出" style="width:100%;color:var(--text3)" readonly>
@@ -806,7 +806,7 @@ function openAddHoldingModal(){
       <div class="field">
         <label>股票代碼</label>
         <div style="display:flex;gap:6px">
-          <input type="text" id="h-code-num" placeholder="輸入代碼如 6175" style="width:130px" oninput="clearStockName()" onblur="lookupStockName()">
+          <input type="text" id="h-code-num" placeholder="輸入代碼如 6175" style="width:130px" oninput="clearStockName();if(this.value.trim().length>=4)lookupStockName()" onblur="lookupStockName()">
           <input type="text" id="h-code-name" placeholder="名稱自動帶出" style="flex:1;color:var(--text3)" readonly>
         </div>
       </div>
